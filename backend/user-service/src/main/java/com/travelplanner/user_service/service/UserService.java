@@ -23,8 +23,6 @@ public class UserService {
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO request) {
         User user = userMapper.toEntity(request);
-        // Ovdje bi u realnosti išlo hashiranje lozinke
-        // user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }
