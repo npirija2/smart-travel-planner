@@ -18,4 +18,10 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        "[jdbc.lob.non_contextual_creation]": true
+        "[hibernate.jdbc.lob.non_contextual_creation]": true
+        generate_statistics: true
+        format_sql: true
+
+logging:
+  level:
+    org.hibernate.stat: DEBUG

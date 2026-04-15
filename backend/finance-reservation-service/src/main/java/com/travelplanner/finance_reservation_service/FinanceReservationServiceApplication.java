@@ -1,6 +1,7 @@
 package com.travelplanner.finance_reservation_service;
 
 import java.time.LocalDateTime;
+import java.util.UUID; 
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -17,41 +18,46 @@ import com.travelplanner.finance_reservation_service.repository.ReservationRepos
 @SpringBootApplication
 public class FinanceReservationServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(FinanceReservationServiceApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(FinanceReservationServiceApplication.class, args);
+    }
 
-	@Bean
-	CommandLineRunner run(BudgetRepository bRepo,
-						  ExpenseRepository eRepo,
-						  ReservationRepository rRepo) {
-		return args -> {
+    @Bean
+    CommandLineRunner run(BudgetRepository bRepo,
+                          ExpenseRepository eRepo,
+                          ReservationRepository rRepo) {
+        return args -> {
+            // Generišemo jedan fiksni UUID za testni "Plan"
+            // U realnom scenariju, ovaj ID bi dobila od Planning servisa
+            UUID sharedPlanId = UUID.randomUUID();
 
-			Budget b = Budget.builder()
-					.totalAmount(1000.0)
-					.planId(1)
-					.currency("EUR")
-					.build();
-			bRepo.save(b);
+            Budget b = Budget.builder()
+                    .totalAmount(1000.0)
+                    .planId(sharedPlanId) // Koristimo UUID
+                    .currency("EUR")
+                    .build();
+            bRepo.save(b);
 
-			Expense e = Expense.builder()
-					.amount(200.0)
-					.planId(1)
-					.category("Food")
-					.date(LocalDateTime.now())
-					.build();
-			eRepo.save(e);
+            Expense e = Expense.builder()
+                    .amount(200.0)
+                    .planId(sharedPlanId) // Isti UUID povezuje trošak sa planom
+                    .category("Food")
+                    .date(LocalDateTime.now())
+                    .build();
+            eRepo.save(e);
 
-			Reservation r = Reservation.builder()
-					.type("Hotel")
-					.details("Sarajevo")
-					.planId(1)
-					.startDate(LocalDateTime.now())
-					.endDate(LocalDateTime.now().plusDays(2))
-					.price(300.0)
-					.status("CONFIRMED")
-					.build();
-			rRepo.save(r);
-		};
-	}
+            Reservation r = Reservation.builder()
+                    .type("Hotel")
+                    .details("Sarajevo")
+                    .planId(sharedPlanId) // Isti UUID povezuje rezervaciju sa planom
+                    .startDate(LocalDateTime.now())
+                    .endDate(LocalDateTime.now().plusDays(2))
+                    .price(300.0)
+                    .status("CONFIRMED")
+                    .build();
+            rRepo.save(r);
+
+            System.out.println("--- Testni podaci ubačeni sa Plan ID: " + sharedPlanId + " ---");
+        };
+    }
 }
