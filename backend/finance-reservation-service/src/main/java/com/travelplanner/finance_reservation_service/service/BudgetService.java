@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID; // Obavezno uvezi UUID
+import java.util.UUID; 
 
 @Service
 @RequiredArgsConstructor
@@ -27,14 +27,14 @@ public class BudgetService {
                 .toList();
     }
 
-    // Promijenjeno u UUID planId
+  
     public List<BudgetResponseDTO> getBudgetsByPlanId(UUID planId) {
         return budgetRepository.findByPlanId(planId).stream()
                 .map(budgetMapper::toResponseDTO)
                 .toList();
     }
 
-    // Promijenjeno u UUID id
+
     public BudgetResponseDTO getBudgetById(UUID id) {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget with ID " + id + " not found"));
@@ -53,7 +53,7 @@ public class BudgetService {
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget with ID " + id + " not found"));
         
-        // MapStruct maper treba da ima definisanu ovu metodu za update
+    
         budgetMapper.updateEntityFromDTO(dto, budget);
         
         Budget saved = budgetRepository.save(budget);

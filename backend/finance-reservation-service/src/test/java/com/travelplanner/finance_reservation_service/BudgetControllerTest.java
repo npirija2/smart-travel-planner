@@ -20,7 +20,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(MockitoExtension.class) // Dodajemo ovo da Mockito sam odradi posao
+@ExtendWith(MockitoExtension.class) 
 public class BudgetControllerTest {
 
     private MockMvc mockMvc;
@@ -32,11 +32,10 @@ public class BudgetControllerTest {
     private BudgetRepository budgetRepository;
 
     @InjectMocks
-    private BudgetController budgetController; // Mockito će sam ubaciti mock-ove u konstruktor
+    private BudgetController budgetController;
 
     @BeforeEach
     void setUp() {
-        // Inicijalizujemo MockMvc sa kontrolerom koji je Mockito već pripremio
         mockMvc = MockMvcBuilders.standaloneSetup(budgetController).build();
     }
 

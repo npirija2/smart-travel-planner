@@ -20,7 +20,7 @@ public class Budget {
     private Double totalAmount;
 
     @Column(name = "plan_id", nullable = false)
-    private UUID planId; // Nezavisnost: Čuvamo UUID plana iz drugog servisa
+    private UUID planId; 
 
     private String currency;
 }

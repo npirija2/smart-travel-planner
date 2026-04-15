@@ -23,14 +23,13 @@ public class BudgetServiceTest {
     @Mock
     private BudgetRepository budgetRepository;
 
-    // Umjesto @Mock, koristimo pravu klasu jer Mockito puca na Javi 23
     private BudgetMapper budgetMapper;
 
     private BudgetService budgetService;
 
     @BeforeEach
     void setUp() {
-        budgetMapper = new BudgetMapper(); // Prava instanca
+        budgetMapper = new BudgetMapper(); 
         budgetService = new BudgetService(budgetRepository, budgetMapper);
     }
 

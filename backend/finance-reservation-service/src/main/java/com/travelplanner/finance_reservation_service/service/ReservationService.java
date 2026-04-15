@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID; // Dodan import za UUID
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,14 +27,12 @@ public class ReservationService {
                 .toList();
     }
 
-    // Promijenjeno u UUID planId
     public List<ReservationResponseDTO> getReservationsByPlanId(UUID planId) {
         return reservationRepository.findByPlanId(planId).stream()
                 .map(reservationMapper::toResponseDTO)
                 .toList();
     }
 
-    // Promijenjeno u UUID id
     public ReservationResponseDTO getReservationById(UUID id) {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation with ID " + id + " not found"));
@@ -53,7 +51,6 @@ public class ReservationService {
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation with ID " + id + " not found"));
         
-        // MapStruct maper treba da ima update metodu
         reservationMapper.updateEntityFromDTO(dto, reservation);
         
         Reservation saved = reservationRepository.save(reservation);

@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID; // Dodan import za UUID
+import java.util.UUID; 
 
 @RestController
 @RequestMapping("/api/expenses")
@@ -37,7 +37,6 @@ public class ExpenseController {
 
     @GetMapping("/plan/{planId}")
     @Operation(summary = "Get expenses by plan ID")
-    // Promijenjeno u UUID
     public ResponseEntity<List<ExpenseResponseDTO>> getExpensesByPlanId(@PathVariable UUID planId) {
         return ResponseEntity.ok(expenseService.getExpensesByPlanId(planId));
     }
@@ -50,7 +49,6 @@ public class ExpenseController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an expense")
-    // Promijenjeno u UUID
     public ResponseEntity<Void> deleteExpense(@PathVariable UUID id) {
         expenseService.deleteExpense(id);
         return ResponseEntity.noContent().build();

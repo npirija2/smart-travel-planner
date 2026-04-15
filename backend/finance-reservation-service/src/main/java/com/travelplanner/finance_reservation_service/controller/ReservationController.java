@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID; // Dodan import
+import java.util.UUID; 
 
 @RestController
 @RequestMapping("/api/reservations")
@@ -36,14 +36,12 @@ public class ReservationController {
             @ApiResponse(responseCode = "200", description = "Reservation found"),
             @ApiResponse(responseCode = "404", description = "Reservation not found")
     })
-    // Promijenjeno u UUID
     public ResponseEntity<ReservationResponseDTO> getReservationById(@PathVariable UUID id) {
         return ResponseEntity.ok(reservationService.getReservationById(id));
     }
 
     @GetMapping("/plan/{planId}")
     @Operation(summary = "Get reservations by plan ID")
-    // Promijenjeno u UUID
     public ResponseEntity<List<ReservationResponseDTO>> getReservationsByPlanId(@PathVariable UUID planId) {
         return ResponseEntity.ok(reservationService.getReservationsByPlanId(planId));
     }
@@ -60,7 +58,6 @@ public class ReservationController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a reservation")
-    // Promijenjeno u UUID
     public ResponseEntity<ReservationResponseDTO> updateReservation(
             @PathVariable UUID id,
             @Valid @RequestBody ReservationRequestDTO dto) {
@@ -69,7 +66,6 @@ public class ReservationController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a reservation")
-    // Promijenjeno u UUID
     public ResponseEntity<Void> deleteReservation(@PathVariable UUID id) {
         reservationService.deleteReservation(id);
         return ResponseEntity.noContent().build();

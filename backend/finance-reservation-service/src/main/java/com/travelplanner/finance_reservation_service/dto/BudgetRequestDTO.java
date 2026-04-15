@@ -13,7 +13,7 @@ public class BudgetRequestDTO {
     private Double totalAmount;
 
     @NotNull(message = "Plan ID is required")
-    private UUID planId; // Promijenjeno u UUID
+    private UUID planId; 
 
     private String currency;
 }

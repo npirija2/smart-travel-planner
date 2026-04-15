@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID; // Dodan import za UUID
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -28,14 +28,12 @@ public class ExpenseService {
                 .toList();
     }
 
-    // Promijenjeno u UUID planId
     public List<ExpenseResponseDTO> getExpensesByPlanId(UUID planId) {
         return expenseRepository.findByPlanId(planId).stream()
                 .map(expenseMapper::toResponseDTO)
                 .toList();
     }
 
-    // Promijenjeno u UUID id
     public ExpenseResponseDTO getExpenseById(UUID id) {
         Expense expense = expenseRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Expense with ID " + id + " not found"));
@@ -52,7 +50,6 @@ public class ExpenseService {
         return expenseMapper.toResponseDTO(saved);
     }
 
-    // Promijenjeno u UUID id
     @Transactional
     public void deleteExpense(UUID id) {
         if (!expenseRepository.existsById(id)) {

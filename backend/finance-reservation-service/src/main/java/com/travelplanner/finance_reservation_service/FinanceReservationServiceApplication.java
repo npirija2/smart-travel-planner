@@ -27,20 +27,18 @@ public class FinanceReservationServiceApplication {
                           ExpenseRepository eRepo,
                           ReservationRepository rRepo) {
         return args -> {
-            // Generišemo jedan fiksni UUID za testni "Plan"
-            // U realnom scenariju, ovaj ID bi dobila od Planning servisa
             UUID sharedPlanId = UUID.randomUUID();
 
             Budget b = Budget.builder()
                     .totalAmount(1000.0)
-                    .planId(sharedPlanId) // Koristimo UUID
+                    .planId(sharedPlanId) 
                     .currency("EUR")
                     .build();
             bRepo.save(b);
 
             Expense e = Expense.builder()
                     .amount(200.0)
-                    .planId(sharedPlanId) // Isti UUID povezuje trošak sa planom
+                    .planId(sharedPlanId) 
                     .category("Food")
                     .date(LocalDateTime.now())
                     .build();
@@ -49,7 +47,7 @@ public class FinanceReservationServiceApplication {
             Reservation r = Reservation.builder()
                     .type("Hotel")
                     .details("Sarajevo")
-                    .planId(sharedPlanId) // Isti UUID povezuje rezervaciju sa planom
+                    .planId(sharedPlanId) 
                     .startDate(LocalDateTime.now())
                     .endDate(LocalDateTime.now().plusDays(2))
                     .price(300.0)

@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID; // Dodan import za UUID
+import java.util.UUID; 
 
 @RestController
 @RequestMapping("/api/budgets")
@@ -36,14 +36,14 @@ public class BudgetController {
             @ApiResponse(responseCode = "200", description = "Budget found"),
             @ApiResponse(responseCode = "404", description = "Budget not found")
     })
-    // Promijenjeno u UUID
+
     public ResponseEntity<BudgetResponseDTO> getBudgetById(@PathVariable UUID id) {
         return ResponseEntity.ok(budgetService.getBudgetById(id));
     }
 
     @GetMapping("/plan/{planId}")
     @Operation(summary = "Get budgets by plan ID")
-    // Promijenjeno u UUID
+
     public ResponseEntity<List<BudgetResponseDTO>> getBudgetsByPlanId(@PathVariable UUID planId) {
         return ResponseEntity.ok(budgetService.getBudgetsByPlanId(planId));
     }
@@ -60,7 +60,7 @@ public class BudgetController {
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a budget")
-    // Promijenjeno u UUID
+
     public ResponseEntity<BudgetResponseDTO> updateBudget(
             @PathVariable UUID id,
             @Valid @RequestBody BudgetRequestDTO dto) {
@@ -69,7 +69,6 @@ public class BudgetController {
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a budget")
-    // Promijenjeno u UUID
     public ResponseEntity<Void> deleteBudget(@PathVariable UUID id) {
         budgetService.deleteBudget(id);
         return ResponseEntity.noContent().build();
