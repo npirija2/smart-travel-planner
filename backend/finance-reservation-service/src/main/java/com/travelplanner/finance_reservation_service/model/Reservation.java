@@ -12,7 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import java.util.UUID;
 @Entity
 @Table(name = "reservations")
 @Data
@@ -22,20 +22,18 @@ import lombok.NoArgsConstructor;
 public class Reservation {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
 
     private String type;
-
     private String details;
 
     @Column(name = "plan_id", nullable = false)
-    private Integer planId;
+    private UUID planId;
 
     private LocalDateTime startDate;
     private LocalDateTime endDate;
 
     private Double price;
-
     private String status;
 }

@@ -12,7 +12,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
+import java.util.UUID;
 @Entity
 @Table(name = "expenses")
 @Data
@@ -22,13 +22,13 @@ import lombok.NoArgsConstructor;
 public class Expense {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
 
     private Double amount;
 
     @Column(name = "plan_id", nullable = false)
-    private Integer planId;
+    private UUID planId;
 
     private String category;
 
