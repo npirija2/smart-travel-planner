@@ -1,11 +1,10 @@
 package com.travelplanner.planning_service.model;
 
-import java.time.LocalDate;
-import java.util.List;
-
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "travel_plans")
@@ -21,10 +20,7 @@ public class TravelPlan {
     private Long id;
 
     @Column(nullable = false)
-    private String title;
-
-    @Column(nullable = false)
-    private String destination;
+    private String name;
 
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
@@ -32,16 +28,18 @@ public class TravelPlan {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    private String status;
-
-    @Column(name = "optimization_priority")
-    private String optimizationPriority;
-
     @Column(name = "owner_id")
     private Long ownerId;
 
-    @Column(name = "share_token")
-    private String shareToken;
+    @Column(name = "description")
+    private String description;
+
+    @Column(name = "status")
+    private String status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "destination_id", nullable = false)
+    private Destination destination;
 
     @OneToMany(mappedBy = "travelPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Day> days;
