@@ -1,11 +1,9 @@
 package com.travelplanner.planning_service.model;
 
-
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "activities")
@@ -20,33 +18,31 @@ public class Activity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @Column(nullable = false)
+    private String name;
+
+    private String description;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "day_id", nullable = false)
     private Day day;
-
-    @ManyToOne
-    @JoinColumn(name = "location_id")
-    private Location location;
 
     @Column(name = "created_by")
     private Long createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "location_id", nullable = false)
+    private Location location;
+
+    private String timeslot;
+
     @Column(name = "start_time")
-    private LocalDateTime startTime;
+    private LocalTime startTime;
 
     @Column(name = "end_time")
-    private LocalDateTime endTime;
+    private LocalTime endTime;
 
-    @Column(name = "time_slot")
-    private String timeSlot;
+    private Integer duration;
 
-    private Double cost;
-
-    @Column(name = "is_confirmed")
-    private Boolean isConfirmed;
-
-    private Integer priority;
-
-    @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Vote> votes;
+    private String status;
 }
