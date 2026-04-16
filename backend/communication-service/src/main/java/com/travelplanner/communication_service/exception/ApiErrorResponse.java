@@ -2,20 +2,21 @@ package com.travelplanner.communication_service.exception;
 
 import java.time.LocalDateTime;
 
-public class ErrorResponse {
+public class ApiErrorResponse {
+
     private String error;
     private String message;
-    private LocalDateTime timestamp;
     private int status;
+    private LocalDateTime timestamp;
 
-    public ErrorResponse() {
+    public ApiErrorResponse() {
     }
 
-    public ErrorResponse(String error, String message, LocalDateTime timestamp, int status) {
+    public ApiErrorResponse(String error, String message, int status, LocalDateTime timestamp) {
         this.error = error;
         this.message = message;
-        this.timestamp = timestamp;
         this.status = status;
+        this.timestamp = timestamp;
     }
 
     public String getError() {
@@ -34,19 +35,19 @@ public class ErrorResponse {
         this.message = message;
     }
 
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(LocalDateTime timestamp) {
-        this.timestamp = timestamp;
-    }
-
     public int getStatus() {
         return status;
     }
 
     public void setStatus(int status) {
         this.status = status;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
     }
 }
