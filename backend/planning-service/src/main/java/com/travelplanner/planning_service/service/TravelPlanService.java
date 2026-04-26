@@ -1,5 +1,11 @@
 package com.travelplanner.planning_service.service;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
 import com.travelplanner.planning_service.dto.TravelPlanRequestDTO;
 import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
 import com.travelplanner.planning_service.exception.BadRequestException;
@@ -8,10 +14,8 @@ import com.travelplanner.planning_service.model.Destination;
 import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -83,6 +87,25 @@ public class TravelPlanService {
         if (dto.getStartDate() != null && dto.getEndDate() != null && dto.getEndDate().isBefore(dto.getStartDate())) {
             throw new BadRequestException("End date must be after or equal to start date");
         }
+    }
+
+    public Page<TravelPlanResponseDTO> getAllPaged(Pageable pageable) {
+    return travelPlanRepository.findAll(pageable)
+            .map(this::mapToResponseDTO);
+    }
+
+    public List<TravelPlanResponseDTO> getByOwnerId(Long ownerId) {
+    return travelPlanRepository.findByOwnerId(ownerId)
+            .stream()
+            .map(this::mapToResponseDTO)
+            .toList();
+    }
+
+    public List<TravelPlanResponseDTO> getByStatus(String status) {
+    return travelPlanRepository.findByStatus(status)
+            .stream()
+            .map(this::mapToResponseDTO)
+            .toList();
     }
 
     private TravelPlanResponseDTO mapToResponseDTO(TravelPlan travelPlan) {

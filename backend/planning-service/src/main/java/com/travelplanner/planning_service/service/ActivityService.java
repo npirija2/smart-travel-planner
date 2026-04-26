@@ -1,5 +1,10 @@
 package com.travelplanner.planning_service.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.travelplanner.planning_service.dto.ActivityRequestDTO;
 import com.travelplanner.planning_service.dto.ActivityResponseDTO;
 import com.travelplanner.planning_service.exception.BadRequestException;
@@ -10,10 +15,8 @@ import com.travelplanner.planning_service.model.Location;
 import com.travelplanner.planning_service.repository.ActivityRepository;
 import com.travelplanner.planning_service.repository.DayRepository;
 import com.travelplanner.planning_service.repository.LocationRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -99,6 +102,31 @@ public class ActivityService {
             throw new ResourceNotFoundException("Activity with id " + id + " not found");
         }
         activityRepository.deleteById(id);
+    }
+
+    @Transactional
+public ActivityResponseDTO addActivityToDay(Long dayId, ActivityRequestDTO dto) {
+
+    Day day = dayRepository.findById(dayId)
+            .orElseThrow(() -> new ResourceNotFoundException("Day not found"));
+
+    Location location = locationRepository.findById(dto.getLocationId())
+            .orElseThrow(() -> new ResourceNotFoundException("Location not found"));
+
+    Activity activity = Activity.builder()
+            .name(dto.getName())
+            .description(dto.getDescription())
+            .day(day)
+            .createdBy(dto.getCreatedBy())
+            .location(location)
+            .timeslot(dto.getTimeslot())
+            .startTime(dto.getStartTime())
+            .endTime(dto.getEndTime())
+            .duration(dto.getDuration())
+            .status(dto.getStatus())
+            .build();
+
+    return mapToResponseDTO(activityRepository.save(activity));
     }
 
     private void validate(ActivityRequestDTO dto) {
