@@ -3,11 +3,14 @@ package com.travelplanner.user_service.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.user_service.dto.UserPreferenceRequestDTO;
 import com.travelplanner.user_service.dto.UserPreferenceResponseDTO;
+import com.travelplanner.user_service.exception.GlobalExceptionHandler;
+import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import com.travelplanner.user_service.service.UserPreferenceService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserPreferenceController.class)
+@Import(GlobalExceptionHandler.class)
 public class UserPreferenceControllerTest {
 
     @Autowired
@@ -72,6 +76,17 @@ public class UserPreferenceControllerTest {
     }
 
     @Test
+    void getPreferenceById_whenMissing_returns404() throws Exception {
+        when(userPreferenceService.getPreferenceById(5))
+                .thenThrow(new ResourceNotFoundException("Preference sa ID-jem 5 nije pronađena"));
+
+        mockMvc.perform(get("/api/preferences/5"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("not_found"))
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
     void updatePreference_returns200() throws Exception {
         UserPreferenceRequestDTO request = new UserPreferenceRequestDTO();
         request.setPreferenceType("currency");
@@ -96,5 +111,19 @@ public class UserPreferenceControllerTest {
     void deletePreference_returns204() throws Exception {
         mockMvc.perform(delete("/api/preferences/5"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void createPreference_withInvalidPayload_returns400() throws Exception {
+        UserPreferenceRequestDTO request = new UserPreferenceRequestDTO();
+        request.setPreferenceType("");
+        request.setPreferenceValue("");
+
+        mockMvc.perform(post("/api/users/1/preferences")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation"))
+                .andExpect(jsonPath("$.status").value(400));
     }
 }

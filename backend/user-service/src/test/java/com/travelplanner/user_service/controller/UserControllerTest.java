@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
 import com.travelplanner.user_service.exception.GlobalExceptionHandler;
+import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import com.travelplanner.user_service.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -86,6 +88,35 @@ public class UserControllerTest {
     void whenDelete_thenReturns204() throws Exception {
         mockMvc.perform(delete("/api/users/1"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void whenUserMissing_thenReturns404AndCustomError() throws Exception {
+        when(userService.getUserById(1)).thenThrow(new ResourceNotFoundException("Korisnik sa ID-jem 1 nije pronađen"));
+
+        mockMvc.perform(get("/api/users/1"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("not_found"))
+                .andExpect(jsonPath("$.message").value("Korisnik sa ID-jem 1 nije pronađen"))
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void whenUnexpectedError_thenReturns500AndCustomError() throws Exception {
+        when(userService.createUser(any(UserRequestDTO.class))).thenThrow(new RuntimeException("boom"));
+
+        UserRequestDTO request = new UserRequestDTO();
+        request.setUsername("nejra");
+        request.setEmail("nejra@test.com");
+        request.setPassword("password123");
+
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("internal_error"))
+                .andExpect(jsonPath("$.message").value("Unexpected error occurred"))
+                .andExpect(jsonPath("$.status").value(500));
     }
 
     @Test
