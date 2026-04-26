@@ -5,7 +5,10 @@ import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
 import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundException;
 import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
 import com.travelplanner.finance_reservation_service.model.Budget;
+import com.travelplanner.finance_reservation_service.model.Expense;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
+
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,5 +69,20 @@ public class BudgetService {
             throw new ResourceNotFoundException("Budget with ID " + id + " not found");
         }
         budgetRepository.deleteById(id);
+    }
+
+    @Transactional
+    public Budget addExpenseToBudget(UUID budgetId, Expense expense) {
+        // 1. Poziv prvom repository-u
+        Budget budget = budgetRepository.findById(budgetId)
+                .orElseThrow(() -> new EntityNotFoundException("Budget not found"));
+
+        // 2. Logika ažuriranja
+        budget.setTotalAmount(budget.getTotalAmount() - expense.getAmount());
+
+        // 3. Poziv drugom repository-u
+        expenseRepository.save(expense);
+        
+        return budgetRepository.save(budget);
     }
 }
