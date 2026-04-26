@@ -46,27 +46,27 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
-    public NotificationResponseDTO getNotificationById(Integer id) {
+    public NotificationResponseDTO getNotificationById(int id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id " + id));
         return mapToResponseDTO(notification);
     }
 
-    public List<NotificationResponseDTO> getNotificationsByUserId(Integer userId) {
+    public List<NotificationResponseDTO> getNotificationsByUserId(int userId) {
         return notificationRepository.findByUserId(userId)
                 .stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public List<NotificationResponseDTO> getNotificationsByPlanId(Integer planId) {
+    public List<NotificationResponseDTO> getNotificationsByPlanId(int planId) {
         return notificationRepository.findByPlanId(planId)
                 .stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public NotificationResponseDTO updateNotification(Integer id, NotificationRequestDTO requestDTO) {
+    public NotificationResponseDTO updateNotification(int id, NotificationRequestDTO requestDTO) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id " + id));
 
@@ -80,7 +80,7 @@ public class NotificationService {
         return mapToResponseDTO(updated);
     }
 
-    public void deleteNotification(Integer id) {
+    public void deleteNotification(int id) {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id " + id));
         notificationRepository.delete(notification);

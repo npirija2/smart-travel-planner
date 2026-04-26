@@ -36,20 +36,20 @@ public class SharedLinkService {
                 .collect(Collectors.toList());
     }
 
-    public SharedLinkResponseDTO getSharedLinkById(Integer id) {
+    public SharedLinkResponseDTO getSharedLinkById(int id) {
         SharedLink sharedLink = sharedLinkRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Shared link not found with id " + id));
         return mapToResponseDTO(sharedLink);
     }
 
-    public List<SharedLinkResponseDTO> getSharedLinksByPlanId(Integer planId) {
+    public List<SharedLinkResponseDTO> getSharedLinksByPlanId(int planId) {
         return sharedLinkRepository.findByPlanId(planId)
                 .stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public SharedLinkResponseDTO updateSharedLink(Integer id, SharedLinkRequestDTO requestDTO) {
+    public SharedLinkResponseDTO updateSharedLink(int id, SharedLinkRequestDTO requestDTO) {
         SharedLink sharedLink = sharedLinkRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Shared link not found with id " + id));
 
@@ -61,7 +61,7 @@ public class SharedLinkService {
         return mapToResponseDTO(updated);
     }
 
-    public void deleteSharedLink(Integer id) {
+    public void deleteSharedLink(int id) {
         SharedLink sharedLink = sharedLinkRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Shared link not found with id " + id));
         sharedLinkRepository.delete(sharedLink);
