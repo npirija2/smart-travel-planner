@@ -2,10 +2,10 @@ package com.travelplanner.user_service.service;
 
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
+import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import com.travelplanner.user_service.mapper.UserMapper;
 import com.travelplanner.user_service.model.User;
 import com.travelplanner.user_service.repository.UserRepository;
-import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,9 +15,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceTest {
