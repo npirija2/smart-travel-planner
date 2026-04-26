@@ -7,6 +7,7 @@ import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
 import com.travelplanner.finance_reservation_service.model.Budget;
 import com.travelplanner.finance_reservation_service.model.Expense;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
+import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class BudgetService {
 
     private final BudgetRepository budgetRepository;
+    private final ExpenseRepository expenseRepository;
     private final BudgetMapper budgetMapper;
 
     public List<BudgetResponseDTO> getAllBudgets() {

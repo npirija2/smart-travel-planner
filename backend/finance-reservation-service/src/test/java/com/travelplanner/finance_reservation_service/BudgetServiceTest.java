@@ -4,6 +4,7 @@ import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
 import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
 import com.travelplanner.finance_reservation_service.model.Budget;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
+import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
 import com.travelplanner.finance_reservation_service.service.BudgetService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,9 @@ public class BudgetServiceTest {
     @Mock
     private BudgetRepository budgetRepository;
 
+    @Mock
+    private ExpenseRepository expenseRepository;
+
     private BudgetMapper budgetMapper;
 
     private BudgetService budgetService;
@@ -30,7 +34,7 @@ public class BudgetServiceTest {
     @BeforeEach
     void setUp() {
         budgetMapper = new BudgetMapper(); 
-        budgetService = new BudgetService(budgetRepository, budgetMapper);
+        budgetService = new BudgetService(budgetRepository, expenseRepository, budgetMapper);
     }
 
     @Test

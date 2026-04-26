@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -78,6 +79,68 @@ public class UserPreferenceServiceTest {
         assertNotNull(response);
         assertEquals(10, response.getId());
         assertEquals(1, response.getUserId());
+    }
+
+    @Test
+    void createPreferences_success() {
+        UserPreferenceRequestDTO request1 = new UserPreferenceRequestDTO();
+        request1.setPreferenceType("language");
+        request1.setPreferenceValue("en");
+
+        UserPreferenceRequestDTO request2 = new UserPreferenceRequestDTO();
+        request2.setPreferenceType("currency");
+        request2.setPreferenceValue("eur");
+
+        UserPreference preference1 = UserPreference.builder()
+                .id(10)
+                .user(user)
+                .preferenceType("language")
+                .preferenceValue("en")
+                .build();
+
+        UserPreference preference2 = UserPreference.builder()
+                .id(11)
+                .user(user)
+                .preferenceType("currency")
+                .preferenceValue("eur")
+                .build();
+
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userPreferenceMapper.toEntity(request1)).thenReturn(UserPreference.builder()
+                .preferenceType("language")
+                .preferenceValue("en")
+                .build());
+        when(userPreferenceMapper.toEntity(request2)).thenReturn(UserPreference.builder()
+                .preferenceType("currency")
+                .preferenceValue("eur")
+                .build());
+        when(userPreferenceRepository.saveAll(any())).thenReturn(List.of(preference1, preference2));
+
+        UserPreferenceResponseDTO response1 = new UserPreferenceResponseDTO();
+        response1.setId(10);
+        response1.setUserId(1);
+        response1.setPreferenceType("language");
+        response1.setPreferenceValue("en");
+
+        UserPreferenceResponseDTO response2 = new UserPreferenceResponseDTO();
+        response2.setId(11);
+        response2.setUserId(1);
+        response2.setPreferenceType("currency");
+        response2.setPreferenceValue("eur");
+
+        when(userPreferenceMapper.toResponseDTO(preference1)).thenReturn(response1);
+        when(userPreferenceMapper.toResponseDTO(preference2)).thenReturn(response2);
+
+        List<UserPreferenceResponseDTO> response = userPreferenceService.createPreferences(1, List.of(request1, request2));
+
+        assertEquals(2, response.size());
+        assertEquals("language", response.get(0).getPreferenceType());
+        assertEquals("currency", response.get(1).getPreferenceType());
+    }
+
+    @Test
+    void createPreferences_emptyList_throwsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class, () -> userPreferenceService.createPreferences(1, List.of()));
     }
 
     @Test
