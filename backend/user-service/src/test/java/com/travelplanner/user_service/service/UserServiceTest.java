@@ -5,6 +5,7 @@ import com.travelplanner.user_service.dto.UserResponseDTO;
 import com.travelplanner.user_service.mapper.UserMapper;
 import com.travelplanner.user_service.model.User;
 import com.travelplanner.user_service.repository.UserRepository;
+import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,5 +54,39 @@ public class UserServiceTest {
         assertNotNull(response);
         assertEquals("nejra", response.getUsername());
         verify(userRepository, times(1)).save(any());
+    }
+
+    @Test
+    void testUpdateUser_Success() {
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenReturn(user);
+        when(userMapper.toDto(any())).thenReturn(UserResponseDTO.builder().username("updated").email("updated@test.com").build());
+
+        UserRequestDTO updateRequest = new UserRequestDTO();
+        updateRequest.setUsername("updated");
+        updateRequest.setEmail("updated@test.com");
+        updateRequest.setPassword("newpassword123");
+
+        UserResponseDTO response = userService.updateUser(1, updateRequest);
+
+        assertNotNull(response);
+        assertEquals("updated", response.getUsername());
+        verify(userRepository, times(1)).save(user);
+    }
+
+    @Test
+    void testDeleteUser_Success() {
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+
+        userService.deleteUser(1);
+
+        verify(userRepository, times(1)).delete(user);
+    }
+
+    @Test
+    void testGetUserById_NotFound() {
+        when(userRepository.findById(1)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> userService.getUserById(1));
     }
 }

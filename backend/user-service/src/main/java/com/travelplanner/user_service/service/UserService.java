@@ -40,4 +40,25 @@ public class UserService {
                 .map(userMapper::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public UserResponseDTO updateUser(Integer id, UserRequestDTO request) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Korisnik sa ID-jem " + id + " nije pronađen"));
+
+        existingUser.setUsername(request.getUsername());
+        existingUser.setEmail(request.getEmail());
+        existingUser.setPasswordHash(request.getPassword());
+
+        User savedUser = userRepository.save(existingUser);
+        return userMapper.toDto(savedUser);
+    }
+
+    @Transactional
+    public void deleteUser(Integer id) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Korisnik sa ID-jem " + id + " nije pronađen"));
+
+        userRepository.delete(existingUser);
+    }
 }

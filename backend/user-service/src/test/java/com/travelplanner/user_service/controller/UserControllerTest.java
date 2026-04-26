@@ -2,6 +2,7 @@ package com.travelplanner.user_service.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.user_service.dto.UserRequestDTO;
+import com.travelplanner.user_service.dto.UserResponseDTO;
 import com.travelplanner.user_service.service.UserService;
 import com.travelplanner.user_service.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
@@ -12,7 +13,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
@@ -39,6 +45,35 @@ public class UserControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    void whenValidUpdate_thenReturns200() throws Exception {
+        UserRequestDTO request = new UserRequestDTO();
+        request.setUsername("nejra-updated");
+        request.setEmail("nejra.updated@test.com");
+        request.setPassword("newpassword123");
+
+        UserResponseDTO response = UserResponseDTO.builder()
+                .id(1)
+                .username("nejra-updated")
+                .email("nejra.updated@test.com")
+                .build();
+
+        when(userService.updateUser(eq(1), any(UserRequestDTO.class))).thenReturn(response);
+
+        mockMvc.perform(put("/api/users/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("nejra-updated"))
+                .andExpect(jsonPath("$.email").value("nejra.updated@test.com"));
+    }
+
+    @Test
+    void whenDelete_thenReturns204() throws Exception {
+        mockMvc.perform(delete("/api/users/1"))
+                .andExpect(status().isNoContent());
     }
 
     @Test
