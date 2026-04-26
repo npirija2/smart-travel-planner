@@ -8,7 +8,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/finance_reservation_db}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:pingpass}
+    password: ${DB_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
 
   jpa:
