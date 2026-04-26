@@ -3,11 +3,14 @@ package com.travelplanner.user_service.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.user_service.dto.PlanUserRequestDTO;
 import com.travelplanner.user_service.dto.PlanUserResponseDTO;
+import com.travelplanner.user_service.exception.GlobalExceptionHandler;
+import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import com.travelplanner.user_service.service.PlanUserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -24,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PlanUserController.class)
+@Import(GlobalExceptionHandler.class)
 public class PlanUserControllerTest {
 
     @Autowired
@@ -72,6 +76,17 @@ public class PlanUserControllerTest {
     }
 
     @Test
+    void getPlanUserById_whenMissing_returns404() throws Exception {
+        when(planUserService.getPlanUserById(9))
+                .thenThrow(new ResourceNotFoundException("Plan korisnik sa ID-jem 9 nije pronađen"));
+
+        mockMvc.perform(get("/api/plan-memberships/9"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("not_found"))
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
     void updatePlanUser_returns200() throws Exception {
         PlanUserRequestDTO request = new PlanUserRequestDTO();
         request.setPlanId(55);
@@ -96,5 +111,17 @@ public class PlanUserControllerTest {
     void deletePlanUser_returns204() throws Exception {
         mockMvc.perform(delete("/api/plan-memberships/9"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void createPlanUser_withInvalidPayload_returns400() throws Exception {
+        PlanUserRequestDTO request = new PlanUserRequestDTO();
+
+        mockMvc.perform(post("/api/users/1/plan-memberships")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation"))
+                .andExpect(jsonPath("$.status").value(400));
     }
 }
