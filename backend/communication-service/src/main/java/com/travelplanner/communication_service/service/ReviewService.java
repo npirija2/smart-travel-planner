@@ -45,13 +45,13 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
-    public ReviewResponseDTO getReviewById(Integer id) {
+    public ReviewResponseDTO getReviewById(int id) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id " + id));
         return mapToResponseDto(review);
     }
 
-    public ReviewResponseDTO updateReview(Integer id, ReviewRequestDTO requestDto) {
+    public ReviewResponseDTO updateReview(int id, ReviewRequestDTO requestDto) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id " + id));
 
@@ -64,7 +64,7 @@ public class ReviewService {
         return mapToResponseDto(updated);
     }
 
-    public void deleteReview(Integer id) {
+    public void deleteReview(int id) {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id " + id));
         reviewRepository.delete(review);
@@ -80,12 +80,12 @@ public class ReviewService {
         return dto;
     }
 
-    public Object getReviewsByUserId(Integer userId) {
+    public Object getReviewsByUserId(int userId) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getReviewsByUserId'");
     }
 
-    public Object getReviewsByActivityId(Integer activityId) {
+    public Object getReviewsByActivityId(int activityId) {
         // TODO Auto-generated method stub
         throw new UnsupportedOperationException("Unimplemented method 'getReviewsByActivityId'");
     }

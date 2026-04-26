@@ -34,28 +34,28 @@ public class ReviewController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ReviewResponseDTO> getReviewById(@PathVariable Integer id) {
+    public ResponseEntity<ReviewResponseDTO> getReviewById(@PathVariable int id) {
         return ResponseEntity.ok(reviewService.getReviewById(id));
     }
 
     @GetMapping("/activity/{activityId}")
-    public ResponseEntity<Object> getReviewsByActivityId(@PathVariable Integer activityId) {
+    public ResponseEntity<Object> getReviewsByActivityId(@PathVariable int activityId) {
         return ResponseEntity.ok(reviewService.getReviewsByActivityId(activityId));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<Object> getReviewsByUserId(@PathVariable Integer userId) {
+    public ResponseEntity<Object> getReviewsByUserId(@PathVariable int userId) {
         return ResponseEntity.ok(reviewService.getReviewsByUserId(userId));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ReviewResponseDTO> updateReview(@PathVariable Integer id,
+    public ResponseEntity<ReviewResponseDTO> updateReview(@PathVariable int id,
                                                           @Valid @RequestBody ReviewRequestDTO dto) {
         return ResponseEntity.ok(reviewService.updateReview(id, dto));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteReview(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteReview(@PathVariable int id) {
         reviewService.deleteReview(id);
         return ResponseEntity.noContent().build();
     }

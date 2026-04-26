@@ -50,33 +50,33 @@ public class NotificationController {
             @ApiResponse(responseCode = "404", description = "Notification not found")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<NotificationResponseDTO> getNotificationById(@PathVariable Integer id) {
+    public ResponseEntity<NotificationResponseDTO> getNotificationById(@PathVariable int id) {
         return ResponseEntity.ok(notificationService.getNotificationById(id));
     }
 
     @Operation(summary = "Get notifications by user id")
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByUserId(@PathVariable Integer userId) {
+    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByUserId(@PathVariable int userId) {
         return ResponseEntity.ok(notificationService.getNotificationsByUserId(userId));
     }
 
     @Operation(summary = "Get notifications by plan id")
     @GetMapping("/plan/{planId}")
-    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByPlanId(@PathVariable Integer planId) {
+    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByPlanId(@PathVariable int planId) {
         return ResponseEntity.ok(notificationService.getNotificationsByPlanId(planId));
     }
 
     @Operation(summary = "Update notification")
     @PutMapping("/{id}")
     public ResponseEntity<NotificationResponseDTO> updateNotification(
-            @PathVariable Integer id,
+            @PathVariable int id,
             @Valid @RequestBody NotificationRequestDTO requestDTO) {
         return ResponseEntity.ok(notificationService.updateNotification(id, requestDTO));
     }
 
     @Operation(summary = "Delete notification")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNotification(@PathVariable Integer id) {
+    public ResponseEntity<Void> deleteNotification(@PathVariable int id) {
         notificationService.deleteNotification(id);
         return ResponseEntity.noContent().build();
     }
