@@ -2,6 +2,7 @@ package com.travelplanner.user_service.controller;
 
 import com.travelplanner.user_service.dto.UserPreferenceRequestDTO;
 import com.travelplanner.user_service.dto.UserPreferenceResponseDTO;
+import com.travelplanner.user_service.dto.UserPreferenceBatchRequestDTO;
 import com.travelplanner.user_service.service.UserPreferenceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,13 @@ public class UserPreferenceController {
             @PathVariable Integer userId,
             @Valid @RequestBody UserPreferenceRequestDTO request) {
         return new ResponseEntity<>(userPreferenceService.createPreference(userId, request), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/api/users/{userId}/preferences/batch")
+    public ResponseEntity<List<UserPreferenceResponseDTO>> createPreferences(
+            @PathVariable Integer userId,
+            @Valid @RequestBody UserPreferenceBatchRequestDTO request) {
+        return new ResponseEntity<>(userPreferenceService.createPreferences(userId, request.getPreferences()), HttpStatus.CREATED);
     }
 
     @GetMapping("/api/users/{userId}/preferences")

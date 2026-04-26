@@ -3,9 +3,9 @@ package com.travelplanner.user_service.service;
 import com.travelplanner.user_service.dto.UserPreferenceRequestDTO;
 import com.travelplanner.user_service.dto.UserPreferenceResponseDTO;
 import com.travelplanner.user_service.exception.ResourceNotFoundException;
+import com.travelplanner.user_service.mapper.UserPreferenceMapper;
 import com.travelplanner.user_service.model.User;
 import com.travelplanner.user_service.model.UserPreference;
-import com.travelplanner.user_service.mapper.UserPreferenceMapper;
 import com.travelplanner.user_service.repository.UserPreferenceRepository;
 import com.travelplanner.user_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +31,24 @@ public class UserPreferenceService {
         preference.setUser(user);
 
         return userPreferenceMapper.toResponseDTO(userPreferenceRepository.save(preference));
+    }
+
+    @Transactional
+    public List<UserPreferenceResponseDTO> createPreferences(Integer userId, List<UserPreferenceRequestDTO> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new IllegalArgumentException("Preferences list cannot be empty");
+        }
+
+        User user = findUser(userId);
+
+        List<UserPreference> preferences = requests.stream()
+                .map(userPreferenceMapper::toEntity)
+                .peek(preference -> preference.setUser(user))
+                .collect(Collectors.toList());
+
+        return userPreferenceRepository.saveAll(preferences).stream()
+                .map(userPreferenceMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

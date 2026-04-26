@@ -1,6 +1,7 @@
 package com.travelplanner.user_service.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.travelplanner.user_service.dto.UserPreferenceBatchRequestDTO;
 import com.travelplanner.user_service.dto.UserPreferenceRequestDTO;
 import com.travelplanner.user_service.dto.UserPreferenceResponseDTO;
 import com.travelplanner.user_service.exception.GlobalExceptionHandler;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -58,6 +60,41 @@ public class UserPreferenceControllerTest {
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(5));
+    }
+
+    @Test
+    void createPreferencesBatch_returns201() throws Exception {
+        UserPreferenceRequestDTO first = new UserPreferenceRequestDTO();
+        first.setPreferenceType("language");
+        first.setPreferenceValue("en");
+
+        UserPreferenceRequestDTO second = new UserPreferenceRequestDTO();
+        second.setPreferenceType("currency");
+        second.setPreferenceValue("eur");
+
+        UserPreferenceBatchRequestDTO request = new UserPreferenceBatchRequestDTO();
+        request.setPreferences(List.of(first, second));
+
+        UserPreferenceResponseDTO response1 = new UserPreferenceResponseDTO();
+        response1.setId(5);
+        response1.setUserId(1);
+        response1.setPreferenceType("language");
+        response1.setPreferenceValue("en");
+
+        UserPreferenceResponseDTO response2 = new UserPreferenceResponseDTO();
+        response2.setId(6);
+        response2.setUserId(1);
+        response2.setPreferenceType("currency");
+        response2.setPreferenceValue("eur");
+
+        when(userPreferenceService.createPreferences(eq(1), anyList())).thenReturn(List.of(response1, response2));
+
+        mockMvc.perform(post("/api/users/1/preferences/batch")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$[0].id").value(5))
+                .andExpect(jsonPath("$[1].id").value(6));
     }
 
     @Test
@@ -120,6 +157,19 @@ public class UserPreferenceControllerTest {
         request.setPreferenceValue("");
 
         mockMvc.perform(post("/api/users/1/preferences")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("validation"))
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void createPreferencesBatch_withEmptyList_returns400() throws Exception {
+        UserPreferenceBatchRequestDTO request = new UserPreferenceBatchRequestDTO();
+        request.setPreferences(List.of());
+
+        mockMvc.perform(post("/api/users/1/preferences/batch")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
