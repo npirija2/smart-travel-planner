@@ -1,15 +1,24 @@
 package com.travelplanner.planning_service.controller;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.travelplanner.planning_service.dto.ActivityRequestDTO;
 import com.travelplanner.planning_service.dto.ActivityResponseDTO;
 import com.travelplanner.planning_service.service.ActivityService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/activities")
@@ -48,5 +57,13 @@ public class ActivityController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         activityService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+    @PostMapping("/day/{dayId}")
+    public ResponseEntity<ActivityResponseDTO> addToDay(
+            @PathVariable Long dayId,
+            @RequestBody ActivityRequestDTO dto) {
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(activityService.addActivityToDay(dayId, dto));
     }
 }
