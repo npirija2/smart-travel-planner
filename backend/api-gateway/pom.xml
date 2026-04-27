@@ -52,6 +52,7 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
+<<<<<<< HEAD
         <groupId>io.jsonwebtoken</groupId>
         <artifactId>jjwt-api</artifactId>
         <version>0.11.5</version>
@@ -69,6 +70,8 @@
         <scope>runtime</scope>
     </dependency>
         <dependency>
+=======
+>>>>>>> origin/main
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
