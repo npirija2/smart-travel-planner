@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,6 +49,54 @@ class NotificationServiceTest {
 
         assertEquals(1, result.getId());
         assertEquals("Test", result.getMessage());
+    }
+
+    @Test
+    void shouldCreateNotificationsBatch() {
+        NotificationRequestDTO first = new NotificationRequestDTO();
+        first.setMessage("First");
+        first.setDate(LocalDateTime.of(2026, 4, 16, 14, 0));
+        first.setUserId(1);
+        first.setPlanId(1);
+        first.setType("INFO");
+
+        NotificationRequestDTO second = new NotificationRequestDTO();
+        second.setMessage("Second");
+        second.setDate(LocalDateTime.of(2026, 4, 16, 15, 0));
+        second.setUserId(1);
+        second.setPlanId(1);
+        second.setType("WARNING");
+
+        Notification savedFirst = Notification.builder()
+                .id(1)
+                .message("First")
+                .date(LocalDateTime.of(2026, 4, 16, 14, 0))
+                .userId(1)
+                .planId(1)
+                .type("INFO")
+                .build();
+
+        Notification savedSecond = Notification.builder()
+                .id(2)
+                .message("Second")
+                .date(LocalDateTime.of(2026, 4, 16, 15, 0))
+                .userId(1)
+                .planId(1)
+                .type("WARNING")
+                .build();
+
+        when(notificationRepository.saveAll(any())).thenReturn(List.of(savedFirst, savedSecond));
+
+        var result = notificationService.createNotifications(List.of(first, second));
+
+        assertEquals(2, result.size());
+        assertEquals("First", result.get(0).getMessage());
+        assertEquals("Second", result.get(1).getMessage());
+    }
+
+    @Test
+    void shouldThrowWhenNotificationBatchIsEmpty() {
+        assertThrows(IllegalArgumentException.class, () -> notificationService.createNotifications(List.of()));
     }
 
     @Test
