@@ -6,6 +6,7 @@ import com.travelplanner.communication_service.exception.ResourceNotFoundExcepti
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -39,6 +40,22 @@ public class NotificationService {
 
         return response;
     }
+
+    @Transactional
+    public List<NotificationResponseDTO> createNotifications(List<NotificationRequestDTO> requests) {
+        if (requests == null || requests.isEmpty()) {
+            throw new IllegalArgumentException("notifications list must not be empty");
+        }
+
+        List<Notification> notifications = requests.stream()
+                .map(this::mapToEntity)
+                .collect(Collectors.toList());
+
+        return notificationRepository.saveAll(notifications).stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
+    }
+
     public List<NotificationResponseDTO> getAllNotifications() {
         return notificationRepository.findAll()
                 .stream()
@@ -84,6 +101,16 @@ public class NotificationService {
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id " + id));
         notificationRepository.delete(notification);
+    }
+
+    private Notification mapToEntity(NotificationRequestDTO requestDTO) {
+        Notification notification = new Notification();
+        notification.setMessage(requestDTO.getMessage());
+        notification.setDate(requestDTO.getDate());
+        notification.setUserId(requestDTO.getUserId());
+        notification.setPlanId(requestDTO.getPlanId());
+        notification.setType(requestDTO.getType());
+        return notification;
     }
 
     private NotificationResponseDTO mapToResponseDTO(Notification notification) {

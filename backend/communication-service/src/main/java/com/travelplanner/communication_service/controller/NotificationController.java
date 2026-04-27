@@ -2,6 +2,7 @@ package com.travelplanner.communication_service.controller;
 
 import com.travelplanner.communication_service.dto.NotificationRequestDTO;
 import com.travelplanner.communication_service.dto.NotificationResponseDTO;
+import com.travelplanner.communication_service.dto.NotificationBatchRequestDTO;
 import com.travelplanner.communication_service.service.NotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -36,6 +37,19 @@ public class NotificationController {
 
         NotificationResponseDTO response = notificationService.createNotification(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "Create notifications in batch")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Notifications created"),
+            @ApiResponse(responseCode = "400", description = "Invalid input")
+    })
+    @PostMapping("/batch")
+    public ResponseEntity<List<NotificationResponseDTO>> createNotificationsBatch(
+            @Valid @RequestBody NotificationBatchRequestDTO requestDTO) {
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(notificationService.createNotifications(requestDTO.getNotifications()));
     }
 
     @Operation(summary = "Get all notifications")
