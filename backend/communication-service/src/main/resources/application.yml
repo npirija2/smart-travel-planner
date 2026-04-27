@@ -20,3 +20,12 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         generate_statistics: true
         "[jdbc.lob.non_contextual_creation]": true
+
+  cloud:
+    compatibility-verifier:
+      enabled: false   # 👈 OVO DODAŠ
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
