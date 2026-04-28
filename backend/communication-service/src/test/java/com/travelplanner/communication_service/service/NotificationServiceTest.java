@@ -1,21 +1,32 @@
 package com.travelplanner.communication_service.service;
 
-import com.travelplanner.communication_service.dto.NotificationRequestDTO;
-import com.travelplanner.communication_service.exception.ResourceNotFoundException;
-import com.travelplanner.communication_service.model.Notification;
-import com.travelplanner.communication_service.repository.NotificationRepository;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.travelplanner.communication_service.dto.NotificationRequestDTO;
+import com.travelplanner.communication_service.dto.NotificationResponseDTO;
+import com.travelplanner.communication_service.exception.ResourceNotFoundException;
+import com.travelplanner.communication_service.model.Notification;
+import com.travelplanner.communication_service.repository.NotificationRepository;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
@@ -26,83 +37,128 @@ class NotificationServiceTest {
     @InjectMocks
     private NotificationService notificationService;
 
+    private Notification notification;
+    private NotificationRequestDTO requestDTO;
+
+    @BeforeEach
+    void setUp() {
+        notification = new Notification();
+        notification.setId(1);
+        notification.setMessage("Test Message");
+        notification.setUserId(10);
+        notification.setPlanId(20);
+
+        requestDTO = new NotificationRequestDTO();
+        requestDTO.setMessage("Test Message");
+        requestDTO.setUserId(10);
+        requestDTO.setPlanId(20);
+    }
+
+    // --- TESTOVI ZA USPJEŠNE SCENARIJE ---
+
     @Test
     void shouldCreateNotification() {
-        NotificationRequestDTO request = new NotificationRequestDTO();
-        request.setMessage("Test");
-        request.setDate(LocalDateTime.of(2026, 4, 16, 14, 0));
-        request.setUserId(1);
-        request.setPlanId(1);
-        request.setType("INFO");
+        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
 
-        Notification saved = new Notification();
-        saved.setId(1);
-        saved.setMessage("Test");
-        saved.setDate(LocalDateTime.of(2026, 4, 16, 14, 0));
-        saved.setUserId(1);
-        saved.setPlanId(1);
-        saved.setType("INFO");
+        NotificationResponseDTO response = notificationService.createNotification(requestDTO);
 
-        when(notificationRepository.save(any(Notification.class))).thenReturn(saved);
+        assertNotNull(response);
+        assertEquals("Test Message", response.getMessage());
+        verify(notificationRepository, times(1)).save(any(Notification.class));
+    }
 
-        var result = notificationService.createNotification(request);
+    @Test
+    void shouldCreateMultipleNotifications() {
+        List<NotificationRequestDTO> requests = List.of(requestDTO);
+        when(notificationRepository.saveAll(anyList())).thenReturn(List.of(notification));
 
+        List<NotificationResponseDTO> responses = notificationService.createNotifications(requests);
+
+        assertEquals(1, responses.size());
+        assertEquals("Test Message", responses.get(0).getMessage());
+    }
+
+    @Test
+    void shouldReturnAllNotifications() {
+        when(notificationRepository.findAll()).thenReturn(List.of(notification));
+
+        List<NotificationResponseDTO> result = notificationService.getAllNotifications();
+
+        assertFalse(result.isEmpty());
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void shouldGetNotificationById() {
+        when(notificationRepository.findById(1)).thenReturn(Optional.of(notification));
+
+        NotificationResponseDTO result = notificationService.getNotificationById(1);
+
+        assertNotNull(result);
         assertEquals(1, result.getId());
-        assertEquals("Test", result.getMessage());
     }
 
     @Test
-    void shouldCreateNotificationsBatch() {
-        NotificationRequestDTO first = new NotificationRequestDTO();
-        first.setMessage("First");
-        first.setDate(LocalDateTime.of(2026, 4, 16, 14, 0));
-        first.setUserId(1);
-        first.setPlanId(1);
-        first.setType("INFO");
+    void shouldGetNotificationsByUserId() {
+        when(notificationRepository.findByUserId(10)).thenReturn(List.of(notification));
 
-        NotificationRequestDTO second = new NotificationRequestDTO();
-        second.setMessage("Second");
-        second.setDate(LocalDateTime.of(2026, 4, 16, 15, 0));
-        second.setUserId(1);
-        second.setPlanId(1);
-        second.setType("WARNING");
+        List<NotificationResponseDTO> result = notificationService.getNotificationsByUserId(10);
 
-        Notification savedFirst = Notification.builder()
-                .id(1)
-                .message("First")
-                .date(LocalDateTime.of(2026, 4, 16, 14, 0))
-                .userId(1)
-                .planId(1)
-                .type("INFO")
-                .build();
-
-        Notification savedSecond = Notification.builder()
-                .id(2)
-                .message("Second")
-                .date(LocalDateTime.of(2026, 4, 16, 15, 0))
-                .userId(1)
-                .planId(1)
-                .type("WARNING")
-                .build();
-
-        when(notificationRepository.saveAll(any())).thenReturn(List.of(savedFirst, savedSecond));
-
-        var result = notificationService.createNotifications(List.of(first, second));
-
-        assertEquals(2, result.size());
-        assertEquals("First", result.get(0).getMessage());
-        assertEquals("Second", result.get(1).getMessage());
+        assertEquals(1, result.size());
+        assertEquals(10, result.get(0).getUserId());
     }
 
     @Test
-    void shouldThrowWhenNotificationBatchIsEmpty() {
-        assertThrows(IllegalArgumentException.class, () -> notificationService.createNotifications(List.of()));
+    void shouldUpdateNotificationSuccessfully() {
+        when(notificationRepository.findById(1)).thenReturn(Optional.of(notification));
+        when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
+
+        NotificationResponseDTO result = notificationService.updateNotification(1, requestDTO);
+
+        assertNotNull(result);
+        verify(notificationRepository).save(any(Notification.class));
     }
 
     @Test
-    void shouldThrowWhenNotificationNotFound() {
+    void shouldDeleteNotificationSuccessfully() {
+        when(notificationRepository.findById(1)).thenReturn(Optional.of(notification));
+        doNothing().when(notificationRepository).delete(notification);
+
+        notificationService.deleteNotification(1);
+
+        verify(notificationRepository, times(1)).delete(notification);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNotificationNotFoundById() {
         when(notificationRepository.findById(999)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> notificationService.getNotificationById(999));
+        assertThrows(ResourceNotFoundException.class, () -> {
+            notificationService.getNotificationById(999);
+        });
+    }
+
+    @Test
+    void shouldThrowExceptionWhenCreatingEmptyNotificationList() {
+        // Testiramo tvoju provjeru: if (requests == null || requests.isEmpty())
+        assertThrows(IllegalArgumentException.class, () -> {
+            notificationService.createNotifications(Collections.emptyList());
+        });
+        
+        assertThrows(IllegalArgumentException.class, () -> {
+            notificationService.createNotifications(null);
+        });
+    }
+
+    @Test
+    void shouldThrowExceptionWhenDeletingNonExistentNotification() {
+        when(notificationRepository.findById(999)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> {
+            notificationService.deleteNotification(999);
+        });
+
+        // Provjeravamo da se delete nikada ne pozove ako id ne postoji
+        verify(notificationRepository, never()).delete(any());
     }
 }

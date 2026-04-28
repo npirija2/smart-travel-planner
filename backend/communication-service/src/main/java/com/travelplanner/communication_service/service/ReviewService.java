@@ -93,7 +93,7 @@ public class ReviewService {
         Boolean exists;
 
         try {
-            exists = planningServiceClient.activityExists(activityId);
+            exists = planningServiceClient.activityExists((long) activityId);
         } catch (Exception e) {
             throw new ServiceUnavailableException("Planning service trenutno nije dostupan. Nije moguće provjeriti aktivnost.");
         }

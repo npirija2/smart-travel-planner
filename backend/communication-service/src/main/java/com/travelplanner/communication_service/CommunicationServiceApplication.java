@@ -22,26 +22,5 @@ public class CommunicationServiceApplication {
 		SpringApplication.run(CommunicationServiceApplication.class, args);
 	}
 
-	@Bean
-	CommandLineRunner run(NotificationRepository nRepo, ReviewRepository rRepo) {
-		return args -> {
-
-			Notification n = Notification.builder()
-					.message("Plan created")
-					.date(LocalDateTime.now())
-					.userId(1)
-					.planId(1)
-					.type("INFO")
-					.build();
-			nRepo.save(n);
-
-			Review r = Review.builder()
-					.userId(1)
-					.activityId(1)
-					.rating(5)
-					.comment("Great activity!")
-					.build();
-			rRepo.save(r);
-		};
-	}
+	
 }

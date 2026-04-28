@@ -1,18 +1,25 @@
 package com.travelplanner.communication_service.service;
 
+import com.travelplanner.communication_service.client.PlanningServiceClient;
 import com.travelplanner.communication_service.dto.ReviewRequestDTO;
+import com.travelplanner.communication_service.dto.ReviewResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
+import com.travelplanner.communication_service.exception.ServiceUnavailableException;
 import com.travelplanner.communication_service.model.Review;
 import com.travelplanner.communication_service.repository.ReviewRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,53 +28,120 @@ class ReviewServiceTest {
     @Mock
     private ReviewRepository reviewRepository;
 
+    @Mock
+    private PlanningServiceClient planningServiceClient;
+
     @InjectMocks
     private ReviewService reviewService;
 
+    private Review review;
+    private ReviewRequestDTO requestDTO;
+
+    @BeforeEach
+    void setUp() {
+        review = new Review();
+        review.setId(1);
+        review.setUserId(101);
+        review.setActivityId(500);
+        review.setRating(5);
+        review.setComment("Odlična aktivnost!");
+
+        requestDTO = new ReviewRequestDTO();
+        requestDTO.setUserId(101);
+        requestDTO.setActivityId(500);
+        requestDTO.setRating(5);
+        requestDTO.setComment("Odlična aktivnost!");
+    }
+
+    // --- USPJEŠNI SCENARIJI ---
+
+    @Test
+    void shouldCreateReviewSuccessfully() {
+        // Mock-amo provjeru aktivnosti (vraća true)
+        when(planningServiceClient.activityExists(500L)).thenReturn(true);
+        when(reviewRepository.save(any(Review.class))).thenReturn(review);
+
+        ReviewResponseDTO response = reviewService.createReview(requestDTO);
+
+        assertNotNull(response);
+        assertEquals(5, response.getRating());
+        verify(planningServiceClient).activityExists(500L);
+        verify(reviewRepository).save(any(Review.class));
+    }
+
+    @Test
+    void shouldReturnAllReviews() {
+        when(reviewRepository.findAll()).thenReturn(List.of(review));
+
+        List<ReviewResponseDTO> result = reviewService.getAllReviews();
+
+        assertEquals(1, result.size());
+        assertEquals("Odlična aktivnost!", result.get(0).getComment());
+    }
+
     @Test
     void shouldGetReviewById() {
-        Review review = new Review();
-        review.setId(1);
-        review.setUserId(1);
-        review.setActivityId(1);
-        review.setRating(5);
-        review.setComment("Great");
-
         when(reviewRepository.findById(1)).thenReturn(Optional.of(review));
 
-        var result = reviewService.getReviewById(1);
+        ReviewResponseDTO response = reviewService.getReviewById(1);
 
-        assertEquals(1, result.getId());
-        assertEquals(5, result.getRating());
+        assertNotNull(response);
+        assertEquals(1, response.getId());
     }
 
     @Test
-    void shouldThrowWhenReviewNotFound() {
-        when(reviewRepository.findById(999)).thenReturn(Optional.empty());
+    void shouldUpdateReviewSuccessfully() {
+        when(reviewRepository.findById(1)).thenReturn(Optional.of(review));
+        when(planningServiceClient.activityExists(anyLong())).thenReturn(true);
+        when(reviewRepository.save(any(Review.class))).thenReturn(review);
 
-        assertThrows(ResourceNotFoundException.class, () -> reviewService.getReviewById(999));
+        ReviewResponseDTO updated = reviewService.updateReview(1, requestDTO);
+
+        assertNotNull(updated);
+        verify(reviewRepository).save(any(Review.class));
     }
 
     @Test
-    void shouldCreateReview() {
-        ReviewRequestDTO request = new ReviewRequestDTO();
-        request.setUserId(1);
-        request.setActivityId(1);
-        request.setRating(4);
-        request.setComment("Nice");
+    void shouldDeleteReviewSuccessfully() {
+        when(reviewRepository.findById(1)).thenReturn(Optional.of(review));
+        doNothing().when(reviewRepository).delete(review);
 
-        Review saved = new Review();
-        saved.setId(1);
-        saved.setUserId(1);
-        saved.setActivityId(1);
-        saved.setRating(4);
-        saved.setComment("Nice");
+        reviewService.deleteReview(1);
 
-        when(reviewRepository.save(any(Review.class))).thenReturn(saved);
+        verify(reviewRepository).delete(review);
+    }
 
-        var result = reviewService.createReview(request);
+    // --- SCENARIJI GREŠKE (ERROR CASES) ---
 
-        assertEquals(1, result.getId());
-        assertEquals("Nice", result.getComment());
+    @Test
+    void shouldThrowExceptionWhenActivityDoesNotExist() {
+        // Mock-amo da aktivnost NE postoji
+        when(planningServiceClient.activityExists(500L)).thenReturn(false);
+
+        assertThrows(ResourceNotFoundException.class, () -> {
+            reviewService.createReview(requestDTO);
+        });
+
+        // Provjeravamo da se spremanje u bazu NIKADA nije dogodilo
+        verify(reviewRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThrowServiceUnavailableWhenPlanningServiceFails() {
+        // Simuliramo pad Planning servisa (baca Exception)
+        when(planningServiceClient.activityExists(anyLong())).thenThrow(new RuntimeException("Down"));
+
+        assertThrows(ServiceUnavailableException.class, () -> {
+            reviewService.createReview(requestDTO);
+        });
+    }
+
+    @Test
+    void shouldThrowNotFoundWhenReviewDoesNotExist() {
+        when(reviewRepository.findById(99)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> {
+            reviewService.getReviewById(99);
+        });
     }
 }
