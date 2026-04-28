@@ -1,4 +1,4 @@
-package com.travelplanner.finance_reservation_service;
+package com.travelplanner.finance_reservation_service.controller;
 
 import com.travelplanner.finance_reservation_service.controller.BudgetController;
 import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
