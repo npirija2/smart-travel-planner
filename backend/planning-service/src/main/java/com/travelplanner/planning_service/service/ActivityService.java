@@ -157,4 +157,8 @@ public ActivityResponseDTO addActivityToDay(Long dayId, ActivityRequestDTO dto) 
                 .status(activity.getStatus())
                 .build();
     }
+
+     public boolean existsById(Long id) {
+                return activityRepository.existsById(id);
+        }
 }

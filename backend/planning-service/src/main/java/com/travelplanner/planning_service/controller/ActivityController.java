@@ -66,4 +66,11 @@ public class ActivityController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(activityService.addActivityToDay(dayId, dto));
     }
+
+
+    @GetMapping("/{id}/exists")
+    public ResponseEntity<Boolean> existsById(@PathVariable Long id) {
+        boolean exists = activityService.existsById(id);
+        return ResponseEntity.ok(exists);
+    }
 }
