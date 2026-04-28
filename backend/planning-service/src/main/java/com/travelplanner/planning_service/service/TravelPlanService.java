@@ -109,20 +109,21 @@ public class TravelPlanService {
     }
 
     private TravelPlanResponseDTO mapToResponseDTO(TravelPlan travelPlan) {
-    return TravelPlanResponseDTO.builder()
-            .id(travelPlan.getId())
-            .name(travelPlan.getName())
-            .startDate(travelPlan.getStartDate())
-            .endDate(travelPlan.getEndDate())
-            .ownerId(travelPlan.getOwnerId())
-            .destinationId(
-                    travelPlan.getDestination() != null ? travelPlan.getDestination().getId() : null
-            )
-            .destinationName(
-                    travelPlan.getDestination() != null ? travelPlan.getDestination().getName() : null
-            )
-            .description(travelPlan.getDescription())
-            .status(travelPlan.getStatus())
-            .build();
-}
+        return TravelPlanResponseDTO.builder()
+                .id(travelPlan.getId())
+                .name(travelPlan.getName())
+                .startDate(travelPlan.getStartDate())
+                .endDate(travelPlan.getEndDate())
+                .ownerId(travelPlan.getOwnerId())
+                .destinationId(
+                        travelPlan.getDestination() != null ? travelPlan.getDestination().getId() : null
+                )
+                .destinationName(
+                        travelPlan.getDestination() != null ? travelPlan.getDestination().getName() : null
+                )
+                .description(travelPlan.getDescription())
+                .status(travelPlan.getStatus())
+                .build();
+        }
+
 }
