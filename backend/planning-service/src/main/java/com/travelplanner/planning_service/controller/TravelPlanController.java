@@ -3,6 +3,7 @@ package com.travelplanner.planning_service.controller;
 import java.util.List;
 
 import org.apache.coyote.BadRequestException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -22,13 +23,15 @@ import com.travelplanner.planning_service.service.TravelPlanService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-
 @RestController
 @RequestMapping("/api/travel-plans")
 @RequiredArgsConstructor
 public class TravelPlanController {
 
     private final TravelPlanService travelPlanService;
+
+    @Value("${server.port}")
+    private String port;
 
     @GetMapping
     public ResponseEntity<List<TravelPlanResponseDTO>> getAll() {
@@ -70,5 +73,9 @@ public class TravelPlanController {
     @GetMapping("/status/{status}")
     public ResponseEntity<List<TravelPlanResponseDTO>> getByStatus(@PathVariable String status) {
         return ResponseEntity.ok(travelPlanService.getByStatus(status));
+    }
+    @GetMapping("/test")
+    public String test() {
+        return "Response from " + port;
     }
 }

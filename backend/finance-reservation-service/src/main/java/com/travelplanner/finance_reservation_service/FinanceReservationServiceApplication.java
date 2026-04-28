@@ -14,7 +14,9 @@ import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
+@EnableDiscoveryClient
 @SpringBootApplication
 public class FinanceReservationServiceApplication {
 
