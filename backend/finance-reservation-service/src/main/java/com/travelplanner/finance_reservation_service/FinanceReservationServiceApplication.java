@@ -24,5 +24,40 @@ public class FinanceReservationServiceApplication {
         SpringApplication.run(FinanceReservationServiceApplication.class, args);
     }
 
-    
+    @Bean
+    CommandLineRunner run(BudgetRepository bRepo,
+                          ExpenseRepository eRepo,
+                          ReservationRepository rRepo) {
+        return args -> {
+            UUID sharedPlanId = UUID.randomUUID();
+
+            Budget b = Budget.builder()
+                    .totalAmount(1000.0)
+                    .planId(sharedPlanId) 
+                    .currency("EUR")
+                    .build();
+            bRepo.save(b);
+
+            Expense e = Expense.builder()
+                    .amount(200.0)
+                    .planId(sharedPlanId) 
+                    .category("Food")
+                    .date(LocalDateTime.now())
+                    .build();
+            eRepo.save(e);
+
+            Reservation r = Reservation.builder()
+                    .type("Hotel")
+                    .details("Sarajevo")
+                    .planId(sharedPlanId) 
+                    .startDate(LocalDateTime.now())
+                    .endDate(LocalDateTime.now().plusDays(2))
+                    .price(300.0)
+                    .status("CONFIRMED")
+                    .build();
+            rRepo.save(r);
+
+            System.out.println("--- Testni podaci ubačeni sa Plan ID: " + sharedPlanId + " ---");
+        };
+    }
 }
