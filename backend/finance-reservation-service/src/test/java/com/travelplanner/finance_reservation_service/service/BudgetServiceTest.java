@@ -1,4 +1,4 @@
-package com.travelplanner.finance_reservation_service;
+package com.travelplanner.finance_reservation_service.service;
 
 import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
 import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
