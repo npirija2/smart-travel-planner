@@ -1,10 +1,12 @@
 package com.travelplanner.api_gateway.util;
 
+import java.security.Key;
+
+import org.springframework.stereotype.Component;
+
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.stereotype.Component;
-import java.security.Key;
 
 @Component
 public class JwtUtils {
