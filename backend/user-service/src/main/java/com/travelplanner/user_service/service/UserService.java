@@ -40,6 +40,15 @@ public class UserService {
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO request) {
         User user = userMapper.toEntity(request);
+        
+        // OVO JE KLJUČNO: Heširaj lozinku prije spašavanja!
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        
+        // Ako u bazi role ne smije biti null, postavi default ako ga nema u requestu
+        if (user.getRole() == null) {
+            user.setRole("ROLE_USER");
+        }
+
         User savedUser = userRepository.save(user);
         return userMapper.toDto(savedUser);
     }
