@@ -8,20 +8,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.travelplanner.finance_reservation_service.dto.ReservationRequestDTO;
 import com.travelplanner.finance_reservation_service.dto.ReservationResponseDTO;
 import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 import com.travelplanner.finance_reservation_service.service.ReservationService;
+import com.travelplanner.finance_reservation_service.util.JwtUtils; // DODANO
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -38,11 +32,13 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final ReservationRepository reservationRepository;
+    private final JwtUtils jwtUtils; // DODANO
 
     @GetMapping
     @Operation(summary = "Get all reservations")
-    public ResponseEntity<List<ReservationResponseDTO>> getAllReservations() {
-        return ResponseEntity.ok(reservationService.getAllReservations());
+    public ResponseEntity<List<ReservationResponseDTO>> getAllReservations(
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(reservationService.getAllReservations(authHeader));
     }
 
     @GetMapping("/{id}")
@@ -51,8 +47,10 @@ public class ReservationController {
             @ApiResponse(responseCode = "200", description = "Reservation found"),
             @ApiResponse(responseCode = "404", description = "Reservation not found")
     })
-    public ResponseEntity<ReservationResponseDTO> getReservationById(@PathVariable UUID id) {
-        return ResponseEntity.ok(reservationService.getReservationById(id));
+    public ResponseEntity<ReservationResponseDTO> getReservationById(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(reservationService.getReservationById(id, authHeader));
     }
 
     @GetMapping("/plan/{planId}/paged")
@@ -61,7 +59,10 @@ public class ReservationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "price") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction) { // Razdvojili smo ih!
+            @RequestParam(defaultValue = "desc") String direction,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+
+        validateToken(authHeader); // Provjera jer ovdje direktno koristimo repository
 
         Sort sorting = direction.equalsIgnoreCase("desc") 
                     ? Sort.by(sortBy).descending() 
@@ -76,20 +77,36 @@ public class ReservationController {
     @Operation(summary = "Get reservations with price higher than minPrice")
     public ResponseEntity<List<Reservation>> getPremiumReservations(
             @PathVariable UUID planId,
-            @RequestParam Double minPrice) {
+            @RequestParam Double minPrice,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        
+        validateToken(authHeader); // Provjera za direktni repository poziv
+        
         return ResponseEntity.ok(reservationRepository.findPremiumReservations(planId, minPrice));
     }
 
     @PostMapping
     @Operation(summary = "Create a reservation")
-    public ResponseEntity<ReservationResponseDTO> createReservation(@Valid @RequestBody ReservationRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(reservationService.createReservation(dto));
+    public ResponseEntity<ReservationResponseDTO> createReservation(
+            @Valid @RequestBody ReservationRequestDTO dto,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservationService.createReservation(dto, authHeader));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a reservation")
-    public ResponseEntity<Void> deleteReservation(@PathVariable UUID id) {
-        reservationService.deleteReservation(id);
+    public ResponseEntity<Void> deleteReservation(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        reservationService.deleteReservation(id, authHeader);
         return ResponseEntity.noContent().build();
+    }
+
+    // Pomoćna metoda za metode koje direktno koriste repository
+    private void validateToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid or missing Authorization header");
+        }
+        jwtUtils.getClaims(authHeader.substring(7));
     }
 }

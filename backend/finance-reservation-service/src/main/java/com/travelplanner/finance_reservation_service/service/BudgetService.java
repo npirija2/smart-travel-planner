@@ -1,21 +1,23 @@
 package com.travelplanner.finance_reservation_service.service;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.travelplanner.finance_reservation_service.dto.BudgetRequestDTO;
 import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
 import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundException;
 import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
-import com.travelplanner.finance_reservation_service.model.Budget;
+import com.travelplanner.finance_reservation_service.model.Budget; // DODANO
 import com.travelplanner.finance_reservation_service.model.Expense;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
+import com.travelplanner.finance_reservation_service.util.JwtUtils;
 
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.UUID; 
+import lombok.RequiredArgsConstructor; 
 
 @Service
 @RequiredArgsConstructor
@@ -25,48 +27,51 @@ public class BudgetService {
     private final BudgetRepository budgetRepository;
     private final ExpenseRepository expenseRepository;
     private final BudgetMapper budgetMapper;
+    private final JwtUtils jwtUtils; 
 
-    public List<BudgetResponseDTO> getAllBudgets() {
+    public List<BudgetResponseDTO> getAllBudgets(String authHeader) {
+        validateToken(authHeader); 
         return budgetRepository.findAll().stream()
                 .map(budgetMapper::toResponseDTO)
                 .toList();
     }
 
-  
-    public List<BudgetResponseDTO> getBudgetsByPlanId(UUID planId) {
+    public List<BudgetResponseDTO> getBudgetsByPlanId(UUID planId, String authHeader) {
+        validateToken(authHeader); 
         return budgetRepository.findByPlanId(planId).stream()
                 .map(budgetMapper::toResponseDTO)
                 .toList();
     }
 
-
-    public BudgetResponseDTO getBudgetById(UUID id) {
+    public BudgetResponseDTO getBudgetById(UUID id, String authHeader) {
+        validateToken(authHeader); 
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget with ID " + id + " not found"));
         return budgetMapper.toResponseDTO(budget);
     }
 
     @Transactional
-    public BudgetResponseDTO createBudget(BudgetRequestDTO dto) {
+    public BudgetResponseDTO createBudget(BudgetRequestDTO dto, String authHeader) {
+        validateToken(authHeader); 
         Budget budget = budgetMapper.toEntity(dto);
         Budget saved = budgetRepository.save(budget);
         return budgetMapper.toResponseDTO(saved);
     }
 
     @Transactional
-    public BudgetResponseDTO updateBudget(UUID id, BudgetRequestDTO dto) {
+    public BudgetResponseDTO updateBudget(UUID id, BudgetRequestDTO dto, String authHeader) {
+        validateToken(authHeader); 
         Budget budget = budgetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Budget with ID " + id + " not found"));
         
-    
         budgetMapper.updateEntityFromDTO(dto, budget);
-        
         Budget saved = budgetRepository.save(budget);
         return budgetMapper.toResponseDTO(saved);
     }
 
     @Transactional
-    public void deleteBudget(UUID id) {
+    public void deleteBudget(UUID id, String authHeader) {
+        validateToken(authHeader); 
         if (!budgetRepository.existsById(id)) {
             throw new ResourceNotFoundException("Budget with ID " + id + " not found");
         }
@@ -74,17 +79,22 @@ public class BudgetService {
     }
 
     @Transactional
-    public Budget addExpenseToBudget(UUID budgetId, Expense expense) {
-        // 1. Poziv prvom repository-u
+    public Budget addExpenseToBudget(UUID budgetId, Expense expense, String authHeader) {
+        validateToken(authHeader); 
         Budget budget = budgetRepository.findById(budgetId)
                 .orElseThrow(() -> new EntityNotFoundException("Budget not found"));
 
-        // 2. Logika ažuriranja
         budget.setTotalAmount(budget.getTotalAmount() - expense.getAmount());
-
-        // 3. Poziv drugom repository-u
         expenseRepository.save(expense);
         
         return budgetRepository.save(budget);
+    }
+
+    private void validateToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid or missing Authorization header");
+        }
+        String token = authHeader.substring(7);
+        jwtUtils.getClaims(token); 
     }
 }
