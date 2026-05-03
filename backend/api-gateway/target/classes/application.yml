@@ -1,0 +1,113 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: false
+      routes:
+        - id: user-service-users
+          uri: lb://user-service
+          predicates:
+            - Path=/api/users/**
+        - id: user-service-preferences
+          uri: lb://user-service
+          predicates:
+            - Path=/api/preferences/**
+        - id: user-service-plan-memberships
+          uri: lb://user-service
+          predicates:
+            - Path=/api/plan-memberships/**
+
+        - id: planning-service-travel-plans
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/travel-plans/**
+        - id: planning-service-activities
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/activities/**
+        - id: planning-service-days
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/days/**
+        - id: planning-service-categories
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/categories/**
+        - id: planning-service-destinations
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/destinations/**
+        - id: planning-service-activity-categories
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/activity-categories/**
+        - id: planning-service-locations
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/locations/**
+
+        - id: communication-service-notifications
+          uri: lb://communication-service
+          predicates:
+            - Path=/api/notifications/**
+        - id: communication-service-reviews
+          uri: lb://communication-service
+          predicates:
+            - Path=/api/reviews/**
+        - id: communication-service-votes
+          uri: lb://communication-service
+          predicates:
+            - Path=/api/votes/**
+        - id: communication-service-shared-links
+          uri: lb://communication-service
+          predicates:
+            - Path=/api/shared-links/**
+
+        - id: finance-service-budgets
+          uri: lb://finance-reservation-service
+          predicates:
+            - Path=/api/budgets/**
+        - id: finance-service-expenses
+          uri: lb://finance-reservation-service
+          predicates:
+            - Path=/api/expenses/**
+        - id: finance-service-reservations
+          uri: lb://finance-reservation-service
+          predicates:
+            - Path=/api/reservations/**
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always

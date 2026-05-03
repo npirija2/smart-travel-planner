@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.LocalDate;
 import java.util.List;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,6 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @ActiveProfiles("test")
 class TravelPlanControllerTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -57,19 +60,19 @@ class TravelPlanControllerTest {
                 .status("PLANNED")
                 .build();
 
-        given(travelPlanService.getAll()).willReturn(List.of(dto));
+        given(travelPlanService.getAll(AUTH_HEADER)).willReturn(List.of(dto));
 
-        mockMvc.perform(get("/api/travel-plans"))
+        mockMvc.perform(get("/api/travel-plans").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Test plan"));
     }
 
     @Test
     void getById_whenMissing_shouldReturn404() throws Exception {
-        given(travelPlanService.getById(9999L))
+        given(travelPlanService.getById(9999L, AUTH_HEADER))
                 .willThrow(new ResourceNotFoundException("Travel plan with id 9999 not found"));
 
-        mockMvc.perform(get("/api/travel-plans/9999"))
+        mockMvc.perform(get("/api/travel-plans/9999").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("not_found"));
     }
@@ -98,9 +101,10 @@ class TravelPlanControllerTest {
                 .status("PLANNED")
                 .build();
 
-        given(travelPlanService.create(any(TravelPlanRequestDTO.class))).willReturn(response);
+        given(travelPlanService.create(any(TravelPlanRequestDTO.class), eq(AUTH_HEADER))).willReturn(response);
 
         mockMvc.perform(post("/api/travel-plans")
+                        .header("Authorization", AUTH_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -120,6 +124,7 @@ class TravelPlanControllerTest {
                 """;
 
         mockMvc.perform(post("/api/travel-plans")
+                        .header("Authorization", AUTH_HEADER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
                 .andExpect(status().isBadRequest())
@@ -128,18 +133,18 @@ class TravelPlanControllerTest {
 
     @Test
     void delete_whenExists_shouldReturn204() throws Exception {
-        doNothing().when(travelPlanService).delete(eq(1L));
+        doNothing().when(travelPlanService).delete(eq(1L), eq(AUTH_HEADER));
 
-        mockMvc.perform(delete("/api/travel-plans/1"))
+        mockMvc.perform(delete("/api/travel-plans/1").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void delete_whenMissing_shouldReturn404() throws Exception {
         doThrow(new ResourceNotFoundException("Travel plan with id 9999 not found"))
-                .when(travelPlanService).delete(9999L);
+                .when(travelPlanService).delete(9999L, AUTH_HEADER);
 
-        mockMvc.perform(delete("/api/travel-plans/9999"))
+        mockMvc.perform(delete("/api/travel-plans/9999").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("not_found"));
     }

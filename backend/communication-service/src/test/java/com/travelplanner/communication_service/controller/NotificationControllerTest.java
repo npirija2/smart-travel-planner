@@ -11,11 +11,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.time.LocalDateTime;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,7 +26,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(NotificationController.class)
+@ActiveProfiles("test")
 class NotificationControllerTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -60,9 +65,10 @@ class NotificationControllerTest {
 
     @Test
     void shouldCreateNotification() throws Exception {
-        when(notificationService.createNotification(any(NotificationRequestDTO.class))).thenReturn(validResponse);
+        when(notificationService.createNotification(any(NotificationRequestDTO.class), eq(AUTH_HEADER))).thenReturn(validResponse);
 
         mockMvc.perform(post("/api/notifications")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isCreated())
@@ -74,9 +80,10 @@ class NotificationControllerTest {
         NotificationBatchRequestDTO batchRequest = new NotificationBatchRequestDTO();
         batchRequest.setNotifications(List.of(validRequest));
 
-        when(notificationService.createNotifications(any())).thenReturn(List.of(validResponse));
+        when(notificationService.createNotifications(any(), eq(AUTH_HEADER))).thenReturn(List.of(validResponse));
 
         mockMvc.perform(post("/api/notifications/batch")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(batchRequest)))
                 .andExpect(status().isCreated())
@@ -85,44 +92,45 @@ class NotificationControllerTest {
 
     @Test
     void shouldGetAllNotifications() throws Exception {
-        when(notificationService.getAllNotifications()).thenReturn(List.of(validResponse));
+        when(notificationService.getAllNotifications(AUTH_HEADER)).thenReturn(List.of(validResponse));
 
-        mockMvc.perform(get("/api/notifications"))
+        mockMvc.perform(get("/api/notifications").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
     }
 
     @Test
     void shouldGetNotificationById() throws Exception {
-        when(notificationService.getNotificationById(1)).thenReturn(validResponse);
+        when(notificationService.getNotificationById(1, AUTH_HEADER)).thenReturn(validResponse);
 
-        mockMvc.perform(get("/api/notifications/1"))
+        mockMvc.perform(get("/api/notifications/1").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
 
     @Test
     void shouldReturn404WhenNotificationNotFound() throws Exception {
-        when(notificationService.getNotificationById(99)).thenThrow(new ResourceNotFoundException("Not found"));
+        when(notificationService.getNotificationById(99, AUTH_HEADER)).thenThrow(new ResourceNotFoundException("Not found"));
 
-        mockMvc.perform(get("/api/notifications/99"))
+        mockMvc.perform(get("/api/notifications/99").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldGetNotificationsByUserId() throws Exception {
-        when(notificationService.getNotificationsByUserId(10)).thenReturn(List.of(validResponse));
+        when(notificationService.getNotificationsByUserId(10, AUTH_HEADER)).thenReturn(List.of(validResponse));
 
-        mockMvc.perform(get("/api/notifications/user/10"))
+        mockMvc.perform(get("/api/notifications/user/10").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].userId").value(10));
     }
 
     @Test
     void shouldUpdateNotification() throws Exception {
-        when(notificationService.updateNotification(eq(1), any(NotificationRequestDTO.class))).thenReturn(validResponse);
+        when(notificationService.updateNotification(eq(1), any(NotificationRequestDTO.class), eq(AUTH_HEADER))).thenReturn(validResponse);
 
         mockMvc.perform(put("/api/notifications/1")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validRequest)))
                 .andExpect(status().isOk());
@@ -130,7 +138,7 @@ class NotificationControllerTest {
 
     @Test
     void shouldDeleteNotification() throws Exception {
-        mockMvc.perform(delete("/api/notifications/1"))
+        mockMvc.perform(delete("/api/notifications/1").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNoContent());
     }
 }

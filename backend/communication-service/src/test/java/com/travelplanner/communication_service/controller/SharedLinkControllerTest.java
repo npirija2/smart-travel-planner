@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -23,7 +24,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(SharedLinkController.class)
+@ActiveProfiles("test")
 class SharedLinkControllerTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -53,9 +57,10 @@ class SharedLinkControllerTest {
 
     @Test
     void shouldCreateSharedLink() throws Exception {
-        when(sharedLinkService.createSharedLink(any(SharedLinkRequestDTO.class))).thenReturn(responseDTO);
+        when(sharedLinkService.createSharedLink(any(SharedLinkRequestDTO.class), eq(AUTH_HEADER))).thenReturn(responseDTO);
 
         mockMvc.perform(post("/api/shared-links")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isCreated())
@@ -65,9 +70,9 @@ class SharedLinkControllerTest {
 
     @Test
     void shouldGetAllSharedLinks() throws Exception {
-        when(sharedLinkService.getAllSharedLinks()).thenReturn(List.of(responseDTO));
+        when(sharedLinkService.getAllSharedLinks(AUTH_HEADER)).thenReturn(List.of(responseDTO));
 
-        mockMvc.perform(get("/api/shared-links"))
+        mockMvc.perform(get("/api/shared-links").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].url").value("http://example.com/share"));
@@ -75,35 +80,36 @@ class SharedLinkControllerTest {
 
     @Test
     void shouldGetSharedLinkById() throws Exception {
-        when(sharedLinkService.getSharedLinkById(1)).thenReturn(responseDTO);
+        when(sharedLinkService.getSharedLinkById(1, AUTH_HEADER)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/shared-links/1"))
+        mockMvc.perform(get("/api/shared-links/1").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
 
     @Test
     void shouldReturn404WhenSharedLinkNotFound() throws Exception {
-        when(sharedLinkService.getSharedLinkById(99)).thenThrow(new ResourceNotFoundException("Link not found"));
+        when(sharedLinkService.getSharedLinkById(99, AUTH_HEADER)).thenThrow(new ResourceNotFoundException("Link not found"));
 
-        mockMvc.perform(get("/api/shared-links/99"))
+        mockMvc.perform(get("/api/shared-links/99").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldGetSharedLinksByPlanId() throws Exception {
-        when(sharedLinkService.getSharedLinksByPlanId(10)).thenReturn(List.of(responseDTO));
+        when(sharedLinkService.getSharedLinksByPlanId(10, AUTH_HEADER)).thenReturn(List.of(responseDTO));
 
-        mockMvc.perform(get("/api/shared-links/plan/10"))
+        mockMvc.perform(get("/api/shared-links/plan/10").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].planId").value(10));
     }
 
     @Test
     void shouldUpdateSharedLink() throws Exception {
-        when(sharedLinkService.updateSharedLink(eq(1), any(SharedLinkRequestDTO.class))).thenReturn(responseDTO);
+        when(sharedLinkService.updateSharedLink(eq(1), any(SharedLinkRequestDTO.class), eq(AUTH_HEADER))).thenReturn(responseDTO);
 
         mockMvc.perform(put("/api/shared-links/1")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isOk())
@@ -112,9 +118,9 @@ class SharedLinkControllerTest {
 
     @Test
     void shouldDeleteSharedLink() throws Exception {
-        doNothing().when(sharedLinkService).deleteSharedLink(1);
+        doNothing().when(sharedLinkService).deleteSharedLink(1, AUTH_HEADER);
 
-        mockMvc.perform(delete("/api/shared-links/1"))
+        mockMvc.perform(delete("/api/shared-links/1").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNoContent());
     }
 }

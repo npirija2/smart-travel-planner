@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -23,7 +24,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ReviewController.class)
+@ActiveProfiles("test")
 class ReviewControllerTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -55,9 +59,10 @@ class ReviewControllerTest {
 
     @Test
     void shouldCreateReview() throws Exception {
-        when(reviewService.createReview(any(ReviewRequestDTO.class))).thenReturn(responseDTO);
+        when(reviewService.createReview(any(ReviewRequestDTO.class), eq(AUTH_HEADER))).thenReturn(responseDTO);
 
         mockMvc.perform(post("/api/reviews")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isCreated())
@@ -66,44 +71,45 @@ class ReviewControllerTest {
 
     @Test
     void shouldGetAllReviews() throws Exception {
-        when(reviewService.getAllReviews()).thenReturn(List.of(responseDTO));
+        when(reviewService.getAllReviews(AUTH_HEADER)).thenReturn(List.of(responseDTO));
 
-        mockMvc.perform(get("/api/reviews"))
+        mockMvc.perform(get("/api/reviews").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
     }
 
     @Test
     void shouldGetReviewById() throws Exception {
-        when(reviewService.getReviewById(1)).thenReturn(responseDTO);
+        when(reviewService.getReviewById(1, AUTH_HEADER)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/reviews/1"))
+        mockMvc.perform(get("/api/reviews/1").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1));
     }
 
     @Test
     void shouldReturn404WhenReviewNotFound() throws Exception {
-        when(reviewService.getReviewById(99)).thenThrow(new ResourceNotFoundException("Review not found"));
+        when(reviewService.getReviewById(99, AUTH_HEADER)).thenThrow(new ResourceNotFoundException("Review not found"));
 
-        mockMvc.perform(get("/api/reviews/99"))
+        mockMvc.perform(get("/api/reviews/99").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldGetReviewsByActivityId() throws Exception {
-        when(reviewService.getReviewsByActivityId(500)).thenReturn(List.of(responseDTO));
+        when(reviewService.getReviewsByActivityId(500, AUTH_HEADER)).thenReturn(List.of(responseDTO));
 
-        mockMvc.perform(get("/api/reviews/activity/500"))
+        mockMvc.perform(get("/api/reviews/activity/500").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].activityId").value(500));
     }
 
     @Test
     void shouldUpdateReview() throws Exception {
-        when(reviewService.updateReview(eq(1), any(ReviewRequestDTO.class))).thenReturn(responseDTO);
+        when(reviewService.updateReview(eq(1), any(ReviewRequestDTO.class), eq(AUTH_HEADER))).thenReturn(responseDTO);
 
         mockMvc.perform(put("/api/reviews/1")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isOk());
@@ -111,9 +117,9 @@ class ReviewControllerTest {
 
     @Test
     void shouldDeleteReview() throws Exception {
-        doNothing().when(reviewService).deleteReview(1);
+        doNothing().when(reviewService).deleteReview(1, AUTH_HEADER);
 
-        mockMvc.perform(delete("/api/reviews/1"))
+        mockMvc.perform(delete("/api/reviews/1").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNoContent());
     }
 }

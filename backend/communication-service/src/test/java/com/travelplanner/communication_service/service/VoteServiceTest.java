@@ -5,6 +5,7 @@ import com.travelplanner.communication_service.dto.VoteResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.model.Vote;
 import com.travelplanner.communication_service.repository.VoteRepository;
+import com.travelplanner.communication_service.util.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,8 +23,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class VoteServiceTest {
 
+    private static final String AUTH_HEADER = "Bearer test-token";
+
     @Mock
     private VoteRepository voteRepository;
+
+    @Mock
+    private JwtUtils jwtUtils;
 
     @InjectMocks
     private VoteService voteService;
@@ -49,7 +55,7 @@ class VoteServiceTest {
         when(voteRepository.existsByUserIdAndActivityId(10, 50)).thenReturn(false);
         when(voteRepository.save(any(Vote.class))).thenReturn(vote);
 
-        VoteResponseDTO response = voteService.createVote(requestDTO);
+        VoteResponseDTO response = voteService.createVote(requestDTO, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals(10, response.getUserId());
@@ -64,7 +70,7 @@ class VoteServiceTest {
 
         // Provjeravamo baca li metodu ispravan Exception
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
-            voteService.createVote(requestDTO);
+            voteService.createVote(requestDTO, AUTH_HEADER);
         });
 
         assertEquals("User has already voted for this activity", exception.getMessage());
@@ -76,7 +82,7 @@ class VoteServiceTest {
     void shouldReturnAllVotes() {
         when(voteRepository.findAll()).thenReturn(List.of(vote));
 
-        List<VoteResponseDTO> result = voteService.getAllVotes();
+        List<VoteResponseDTO> result = voteService.getAllVotes(AUTH_HEADER);
 
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
@@ -86,7 +92,7 @@ class VoteServiceTest {
     void shouldGetVoteById() {
         when(voteRepository.findById(1)).thenReturn(Optional.of(vote));
 
-        VoteResponseDTO response = voteService.getVoteById(1);
+        VoteResponseDTO response = voteService.getVoteById(1, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals(1, response.getId());
@@ -97,7 +103,7 @@ class VoteServiceTest {
         when(voteRepository.findById(99)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> {
-            voteService.getVoteById(99);
+            voteService.getVoteById(99, AUTH_HEADER);
         });
     }
 
@@ -105,7 +111,7 @@ class VoteServiceTest {
     void shouldGetVotesByUserId() {
         when(voteRepository.findByUserId(10)).thenReturn(List.of(vote));
 
-        List<VoteResponseDTO> result = voteService.getVotesByUserId(10);
+        List<VoteResponseDTO> result = voteService.getVotesByUserId(10, AUTH_HEADER);
 
         assertEquals(1, result.size());
         assertEquals(10, result.get(0).getUserId());
@@ -116,7 +122,7 @@ class VoteServiceTest {
         when(voteRepository.findById(1)).thenReturn(Optional.of(vote));
         doNothing().when(voteRepository).delete(vote);
 
-        voteService.deleteVote(1);
+        voteService.deleteVote(1, AUTH_HEADER);
 
         verify(voteRepository, times(1)).delete(vote);
     }

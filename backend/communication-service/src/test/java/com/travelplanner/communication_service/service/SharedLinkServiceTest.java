@@ -5,6 +5,7 @@ import com.travelplanner.communication_service.dto.SharedLinkResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.model.SharedLink;
 import com.travelplanner.communication_service.repository.SharedLinkRepository;
+import com.travelplanner.communication_service.util.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,8 +23,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class SharedLinkServiceTest {
 
+    private static final String AUTH_HEADER = "Bearer test-token";
+
     @Mock
     private SharedLinkRepository sharedLinkRepository;
+
+    @Mock
+    private JwtUtils jwtUtils;
 
     @InjectMocks
     private SharedLinkService sharedLinkService;
@@ -52,7 +58,7 @@ class SharedLinkServiceTest {
         // Kada se pozove save, vrati naš pripremljeni link
         when(sharedLinkRepository.save(any(SharedLink.class))).thenReturn(sharedLink);
 
-        SharedLinkResponseDTO response = sharedLinkService.createSharedLink(requestDTO);
+        SharedLinkResponseDTO response = sharedLinkService.createSharedLink(requestDTO, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals("http://example.com", response.getUrl());
@@ -63,7 +69,7 @@ class SharedLinkServiceTest {
     void shouldReturnAllSharedLinks() {
         when(sharedLinkRepository.findAll()).thenReturn(List.of(sharedLink));
 
-        List<SharedLinkResponseDTO> result = sharedLinkService.getAllSharedLinks();
+        List<SharedLinkResponseDTO> result = sharedLinkService.getAllSharedLinks(AUTH_HEADER);
 
         assertEquals(1, result.size());
         assertEquals(sharedLink.getUrl(), result.get(0).getUrl());
@@ -73,7 +79,7 @@ class SharedLinkServiceTest {
     void shouldGetSharedLinkById() {
         when(sharedLinkRepository.findById(1)).thenReturn(Optional.of(sharedLink));
 
-        SharedLinkResponseDTO response = sharedLinkService.getSharedLinkById(1);
+        SharedLinkResponseDTO response = sharedLinkService.getSharedLinkById(1, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals(1, response.getId());
@@ -85,7 +91,7 @@ class SharedLinkServiceTest {
 
         // Provjeravamo baca li točno našu ResourceNotFoundException
         assertThrows(ResourceNotFoundException.class, () -> {
-            sharedLinkService.getSharedLinkById(99);
+            sharedLinkService.getSharedLinkById(99, AUTH_HEADER);
         });
     }
 
@@ -95,7 +101,7 @@ class SharedLinkServiceTest {
         when(sharedLinkRepository.save(any(SharedLink.class))).thenReturn(sharedLink);
 
         requestDTO.setUrl("http://new-url.com");
-        SharedLinkResponseDTO updated = sharedLinkService.updateSharedLink(1, requestDTO);
+        SharedLinkResponseDTO updated = sharedLinkService.updateSharedLink(1, requestDTO, AUTH_HEADER);
 
         assertNotNull(updated);
         verify(sharedLinkRepository).save(any(SharedLink.class));
@@ -106,7 +112,7 @@ class SharedLinkServiceTest {
         when(sharedLinkRepository.findById(1)).thenReturn(Optional.of(sharedLink));
         doNothing().when(sharedLinkRepository).delete(sharedLink);
 
-        sharedLinkService.deleteSharedLink(1);
+        sharedLinkService.deleteSharedLink(1, AUTH_HEADER);
 
         verify(sharedLinkRepository, times(1)).delete(sharedLink);
     }
