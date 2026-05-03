@@ -7,8 +7,10 @@ import com.travelplanner.planning_service.service.CategoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean; // PAZI NA OVAJ IMPORT
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -21,6 +23,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CategoryController.class)
+@AutoConfigureMockMvc(addFilters = false)
+@ActiveProfiles("test")
 class CategoryControllerTest {
 
     @Autowired
@@ -67,7 +71,7 @@ class CategoryControllerTest {
         mockMvc.perform(get("/api/categories"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$.name").value("Museums"));
+                .andExpect(jsonPath("$[0].name").value("Museums"));
     }
 
     @Test

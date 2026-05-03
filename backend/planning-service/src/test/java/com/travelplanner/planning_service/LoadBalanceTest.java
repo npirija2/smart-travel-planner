@@ -1,8 +1,10 @@
 package com.travelplanner.planning_service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.springframework.web.client.RestTemplate;
 
+@Disabled("Requires two manually running planning-service instances on localhost:8082 and localhost:8083")
 public class LoadBalanceTest {
 
     @Test

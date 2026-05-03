@@ -5,7 +5,7 @@ import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
 import com.travelplanner.finance_reservation_service.model.Budget;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
-import com.travelplanner.finance_reservation_service.service.BudgetService;
+import com.travelplanner.finance_reservation_service.util.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,11 +21,16 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class BudgetServiceTest {
 
+    private static final String AUTH_HEADER = "Bearer test-token";
+
     @Mock
     private BudgetRepository budgetRepository;
 
     @Mock
     private ExpenseRepository expenseRepository;
+
+    @Mock
+    private JwtUtils jwtUtils;
 
     private BudgetMapper budgetMapper;
 
@@ -34,7 +39,7 @@ public class BudgetServiceTest {
     @BeforeEach
     void setUp() {
         budgetMapper = new BudgetMapper(); 
-        budgetService = new BudgetService(budgetRepository, expenseRepository, budgetMapper);
+        budgetService = new BudgetService(budgetRepository, expenseRepository, budgetMapper, jwtUtils);
     }
 
     @Test
@@ -46,7 +51,7 @@ public class BudgetServiceTest {
 
         when(budgetRepository.findById(id)).thenReturn(Optional.of(budget));
 
-        BudgetResponseDTO result = budgetService.getBudgetById(id);
+        BudgetResponseDTO result = budgetService.getBudgetById(id, AUTH_HEADER);
 
         assertNotNull(result);
         assertEquals(id, result.getId());

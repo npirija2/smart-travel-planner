@@ -7,6 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 
 import com.travelplanner.finance_reservation_service.model.Budget;
 import com.travelplanner.finance_reservation_service.model.Expense;
@@ -23,6 +24,7 @@ public class FinanceReservationServiceApplication {
     }
 
     @Bean
+    @Profile("!test")
     CommandLineRunner run(BudgetRepository bRepo,
                           ExpenseRepository eRepo,
                           ReservationRepository rRepo) {

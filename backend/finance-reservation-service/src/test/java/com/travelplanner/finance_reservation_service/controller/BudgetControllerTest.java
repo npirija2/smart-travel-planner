@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -28,7 +29,10 @@ import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundE
 import com.travelplanner.finance_reservation_service.service.BudgetService;
 
 @WebMvcTest(BudgetController.class)
+@ActiveProfiles("test")
 class BudgetControllerTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -61,9 +65,9 @@ class BudgetControllerTest {
 
     @Test
     void shouldGetAllBudgets() throws Exception {
-        when(budgetService.getAllBudgets()).thenReturn(List.of(responseDTO));
+        when(budgetService.getAllBudgets(AUTH_HEADER)).thenReturn(List.of(responseDTO));
 
-        mockMvc.perform(get("/api/budgets"))
+        mockMvc.perform(get("/api/budgets").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].totalAmount").value(1000.0));
@@ -71,9 +75,9 @@ class BudgetControllerTest {
 
     @Test
     void shouldGetBudgetById() throws Exception {
-        when(budgetService.getBudgetById(budgetId)).thenReturn(responseDTO);
+        when(budgetService.getBudgetById(budgetId, AUTH_HEADER)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/budgets/" + budgetId))
+        mockMvc.perform(get("/api/budgets/" + budgetId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(budgetId.toString()));
     }
@@ -81,27 +85,28 @@ class BudgetControllerTest {
     @Test
     void shouldReturn404WhenBudgetNotFound() throws Exception {
         UUID randomId = UUID.randomUUID();
-        when(budgetService.getBudgetById(randomId))
+        when(budgetService.getBudgetById(randomId, AUTH_HEADER))
                 .thenThrow(new ResourceNotFoundException("Budget not found"));
 
-        mockMvc.perform(get("/api/budgets/" + randomId))
+        mockMvc.perform(get("/api/budgets/" + randomId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldGetBudgetsByPlanId() throws Exception {
-        when(budgetService.getBudgetsByPlanId(planId)).thenReturn(List.of(responseDTO));
+        when(budgetService.getBudgetsByPlanId(planId, AUTH_HEADER)).thenReturn(List.of(responseDTO));
 
-        mockMvc.perform(get("/api/budgets/plan/" + planId))
+        mockMvc.perform(get("/api/budgets/plan/" + planId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0][0].planId").value(planId.toString()));
+                .andExpect(jsonPath("$[0].planId").value(planId.toString()));
     }
 
     @Test
     void shouldCreateBudget() throws Exception {
-        when(budgetService.createBudget(any(BudgetRequestDTO.class))).thenReturn(responseDTO);
+        when(budgetService.createBudget(any(BudgetRequestDTO.class), eq(AUTH_HEADER))).thenReturn(responseDTO);
 
         mockMvc.perform(post("/api/budgets")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isCreated())
@@ -110,9 +115,10 @@ class BudgetControllerTest {
 
     @Test
     void shouldUpdateBudget() throws Exception {
-        when(budgetService.updateBudget(eq(budgetId), any(BudgetRequestDTO.class))).thenReturn(responseDTO);
+        when(budgetService.updateBudget(eq(budgetId), any(BudgetRequestDTO.class), eq(AUTH_HEADER))).thenReturn(responseDTO);
 
         mockMvc.perform(put("/api/budgets/" + budgetId)
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isOk())
@@ -121,9 +127,9 @@ class BudgetControllerTest {
 
     @Test
     void shouldDeleteBudget() throws Exception {
-        doNothing().when(budgetService).deleteBudget(budgetId);
+        doNothing().when(budgetService).deleteBudget(budgetId, AUTH_HEADER);
 
-        mockMvc.perform(delete("/api/budgets/" + budgetId))
+        mockMvc.perform(delete("/api/budgets/" + budgetId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNoContent());
     }
 }

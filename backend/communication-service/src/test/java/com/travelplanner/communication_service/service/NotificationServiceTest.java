@@ -27,12 +27,18 @@ import com.travelplanner.communication_service.dto.NotificationResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
+import com.travelplanner.communication_service.util.JwtUtils;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
+    private static final String AUTH_HEADER = "Bearer test-token";
+
     @Mock
     private NotificationRepository notificationRepository;
+
+    @Mock
+    private JwtUtils jwtUtils;
 
     @InjectMocks
     private NotificationService notificationService;
@@ -60,7 +66,7 @@ class NotificationServiceTest {
     void shouldCreateNotification() {
         when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
 
-        NotificationResponseDTO response = notificationService.createNotification(requestDTO);
+        NotificationResponseDTO response = notificationService.createNotification(requestDTO, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals("Test Message", response.getMessage());
@@ -72,7 +78,7 @@ class NotificationServiceTest {
         List<NotificationRequestDTO> requests = List.of(requestDTO);
         when(notificationRepository.saveAll(anyList())).thenReturn(List.of(notification));
 
-        List<NotificationResponseDTO> responses = notificationService.createNotifications(requests);
+        List<NotificationResponseDTO> responses = notificationService.createNotifications(requests, AUTH_HEADER);
 
         assertEquals(1, responses.size());
         assertEquals("Test Message", responses.get(0).getMessage());
@@ -82,7 +88,7 @@ class NotificationServiceTest {
     void shouldReturnAllNotifications() {
         when(notificationRepository.findAll()).thenReturn(List.of(notification));
 
-        List<NotificationResponseDTO> result = notificationService.getAllNotifications();
+        List<NotificationResponseDTO> result = notificationService.getAllNotifications(AUTH_HEADER);
 
         assertFalse(result.isEmpty());
         assertEquals(1, result.size());
@@ -92,7 +98,7 @@ class NotificationServiceTest {
     void shouldGetNotificationById() {
         when(notificationRepository.findById(1)).thenReturn(Optional.of(notification));
 
-        NotificationResponseDTO result = notificationService.getNotificationById(1);
+        NotificationResponseDTO result = notificationService.getNotificationById(1, AUTH_HEADER);
 
         assertNotNull(result);
         assertEquals(1, result.getId());
@@ -102,7 +108,7 @@ class NotificationServiceTest {
     void shouldGetNotificationsByUserId() {
         when(notificationRepository.findByUserId(10)).thenReturn(List.of(notification));
 
-        List<NotificationResponseDTO> result = notificationService.getNotificationsByUserId(10);
+        List<NotificationResponseDTO> result = notificationService.getNotificationsByUserId(10, AUTH_HEADER);
 
         assertEquals(1, result.size());
         assertEquals(10, result.get(0).getUserId());
@@ -113,7 +119,7 @@ class NotificationServiceTest {
         when(notificationRepository.findById(1)).thenReturn(Optional.of(notification));
         when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
 
-        NotificationResponseDTO result = notificationService.updateNotification(1, requestDTO);
+        NotificationResponseDTO result = notificationService.updateNotification(1, requestDTO, AUTH_HEADER);
 
         assertNotNull(result);
         verify(notificationRepository).save(any(Notification.class));
@@ -124,7 +130,7 @@ class NotificationServiceTest {
         when(notificationRepository.findById(1)).thenReturn(Optional.of(notification));
         doNothing().when(notificationRepository).delete(notification);
 
-        notificationService.deleteNotification(1);
+        notificationService.deleteNotification(1, AUTH_HEADER);
 
         verify(notificationRepository, times(1)).delete(notification);
     }
@@ -134,7 +140,7 @@ class NotificationServiceTest {
         when(notificationRepository.findById(999)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> {
-            notificationService.getNotificationById(999);
+            notificationService.getNotificationById(999, AUTH_HEADER);
         });
     }
 
@@ -142,11 +148,11 @@ class NotificationServiceTest {
     void shouldThrowExceptionWhenCreatingEmptyNotificationList() {
         // Testiramo tvoju provjeru: if (requests == null || requests.isEmpty())
         assertThrows(IllegalArgumentException.class, () -> {
-            notificationService.createNotifications(Collections.emptyList());
+            notificationService.createNotifications(Collections.emptyList(), AUTH_HEADER);
         });
         
         assertThrows(IllegalArgumentException.class, () -> {
-            notificationService.createNotifications(null);
+            notificationService.createNotifications(null, AUTH_HEADER);
         });
     }
 
@@ -155,7 +161,7 @@ class NotificationServiceTest {
         when(notificationRepository.findById(999)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> {
-            notificationService.deleteNotification(999);
+            notificationService.deleteNotification(999, AUTH_HEADER);
         });
 
         // Provjeravamo da se delete nikada ne pozove ako id ne postoji
