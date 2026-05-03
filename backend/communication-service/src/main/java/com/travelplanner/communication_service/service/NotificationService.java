@@ -5,6 +5,7 @@ import com.travelplanner.communication_service.dto.NotificationResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
+import com.travelplanner.communication_service.util.JwtUtils; // DODAJ IMPORT
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,34 +16,26 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final JwtUtils jwtUtils; // DODAJ OVO
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationRepository notificationRepository, JwtUtils jwtUtils) { // DODAJ JwtUtils u konstruktor
         this.notificationRepository = notificationRepository;
+        this.jwtUtils = jwtUtils;
     }
 
-    public NotificationResponseDTO createNotification(NotificationRequestDTO requestDTO) {
-        Notification notification = new Notification();
-        notification.setMessage(requestDTO.getMessage());
-        notification.setDate(requestDTO.getDate());
-        notification.setUserId(requestDTO.getUserId());
-        notification.setPlanId(requestDTO.getPlanId());
-        notification.setType(requestDTO.getType());
-
+    // DODAJ authHeader u svaku metodu
+    public NotificationResponseDTO createNotification(NotificationRequestDTO requestDTO, String authHeader) {
+        validateToken(authHeader); // Provjera validnosti na ulazu
+        
+        Notification notification = mapToEntity(requestDTO);
         Notification saved = notificationRepository.save(notification);
-
-        NotificationResponseDTO response = new NotificationResponseDTO();
-        response.setId(saved.getId());
-        response.setMessage(saved.getMessage());
-        response.setDate(saved.getDate());
-        response.setUserId(saved.getUserId());
-        response.setPlanId(saved.getPlanId());
-        response.setType(saved.getType());
-
-        return response;
+        return mapToResponseDTO(saved);
     }
 
     @Transactional
-    public List<NotificationResponseDTO> createNotifications(List<NotificationRequestDTO> requests) {
+    public List<NotificationResponseDTO> createNotifications(List<NotificationRequestDTO> requests, String authHeader) {
+        validateToken(authHeader);
+        
         if (requests == null || requests.isEmpty()) {
             throw new IllegalArgumentException("notifications list must not be empty");
         }
@@ -56,34 +49,40 @@ public class NotificationService {
                 .collect(Collectors.toList());
     }
 
-    public List<NotificationResponseDTO> getAllNotifications() {
+    public List<NotificationResponseDTO> getAllNotifications(String authHeader) {
+        validateToken(authHeader);
         return notificationRepository.findAll()
                 .stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public NotificationResponseDTO getNotificationById(int id) {
+    public NotificationResponseDTO getNotificationById(int id, String authHeader) {
+        validateToken(authHeader);
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id " + id));
         return mapToResponseDTO(notification);
     }
 
-    public List<NotificationResponseDTO> getNotificationsByUserId(int userId) {
+    public List<NotificationResponseDTO> getNotificationsByUserId(int userId, String authHeader) {
+        validateToken(authHeader);
+        // Ovdje možeš dodati provjeru: da li je userId iz tokena isti kao ovaj iz putanje?
         return notificationRepository.findByUserId(userId)
                 .stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public List<NotificationResponseDTO> getNotificationsByPlanId(int planId) {
+    public List<NotificationResponseDTO> getNotificationsByPlanId(int planId, String authHeader) {
+        validateToken(authHeader);
         return notificationRepository.findByPlanId(planId)
                 .stream()
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    public NotificationResponseDTO updateNotification(int id, NotificationRequestDTO requestDTO) {
+    public NotificationResponseDTO updateNotification(int id, NotificationRequestDTO requestDTO, String authHeader) {
+        validateToken(authHeader);
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id " + id));
 
@@ -97,10 +96,20 @@ public class NotificationService {
         return mapToResponseDTO(updated);
     }
 
-    public void deleteNotification(int id) {
+    public void deleteNotification(int id, String authHeader) {
+        validateToken(authHeader);
         Notification notification = notificationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Notification not found with id " + id));
         notificationRepository.delete(notification);
+    }
+
+    // POMOĆNA METODA ZA VALIDACIJU (da ne ponavljaš kod)
+    private void validateToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid or missing Authorization header");
+        }
+        String token = authHeader.substring(7);
+        jwtUtils.getClaims(token); // Ako token ne valja, ovdje će baciti Exception
     }
 
     private Notification mapToEntity(NotificationRequestDTO requestDTO) {

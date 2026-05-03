@@ -31,40 +31,50 @@ public class SharedLinkController {
             @ApiResponse(responseCode = "400", description = "Invalid input")
     })
     @PostMapping
-    public ResponseEntity<SharedLinkResponseDTO> createSharedLink(@Valid @RequestBody SharedLinkRequestDTO requestDTO) {
-        return new ResponseEntity<>(sharedLinkService.createSharedLink(requestDTO), HttpStatus.CREATED);
+    public ResponseEntity<SharedLinkResponseDTO> createSharedLink(
+            @Valid @RequestBody SharedLinkRequestDTO requestDTO,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return new ResponseEntity<>(sharedLinkService.createSharedLink(requestDTO, authHeader), HttpStatus.CREATED);
     }
 
     @Operation(summary = "Get all shared links")
     @GetMapping
-    public ResponseEntity<List<SharedLinkResponseDTO>> getAllSharedLinks() {
-        return ResponseEntity.ok(sharedLinkService.getAllSharedLinks());
+    public ResponseEntity<List<SharedLinkResponseDTO>> getAllSharedLinks(
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(sharedLinkService.getAllSharedLinks(authHeader));
     }
 
     @Operation(summary = "Get shared link by id")
     @GetMapping("/{id}")
-    public ResponseEntity<SharedLinkResponseDTO> getSharedLinkById(@PathVariable Integer id) {
-        return ResponseEntity.ok(sharedLinkService.getSharedLinkById(id));
+    public ResponseEntity<SharedLinkResponseDTO> getSharedLinkById(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(sharedLinkService.getSharedLinkById(id, authHeader));
     }
 
     @Operation(summary = "Get shared links by plan id")
     @GetMapping("/plan/{planId}")
-    public ResponseEntity<List<SharedLinkResponseDTO>> getSharedLinksByPlanId(@PathVariable Integer planId) {
-        return ResponseEntity.ok(sharedLinkService.getSharedLinksByPlanId(planId));
+    public ResponseEntity<List<SharedLinkResponseDTO>> getSharedLinksByPlanId(
+            @PathVariable Integer planId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(sharedLinkService.getSharedLinksByPlanId(planId, authHeader));
     }
 
     @Operation(summary = "Update shared link")
     @PutMapping("/{id}")
     public ResponseEntity<SharedLinkResponseDTO> updateSharedLink(
             @PathVariable Integer id,
-            @Valid @RequestBody SharedLinkRequestDTO requestDTO) {
-        return ResponseEntity.ok(sharedLinkService.updateSharedLink(id, requestDTO));
+            @Valid @RequestBody SharedLinkRequestDTO requestDTO,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(sharedLinkService.updateSharedLink(id, requestDTO, authHeader));
     }
 
     @Operation(summary = "Delete shared link")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSharedLink(@PathVariable Integer id) {
-        sharedLinkService.deleteSharedLink(id);
+    public ResponseEntity<Void> deleteSharedLink(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        sharedLinkService.deleteSharedLink(id, authHeader);
         return ResponseEntity.noContent().build();
     }
 }

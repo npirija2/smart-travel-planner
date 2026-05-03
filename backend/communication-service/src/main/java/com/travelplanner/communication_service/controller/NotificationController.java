@@ -27,71 +27,71 @@ public class NotificationController {
     }
 
     @Operation(summary = "Create notification")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Notification created"),
-            @ApiResponse(responseCode = "400", description = "Invalid input")
-    })
     @PostMapping
     public ResponseEntity<NotificationResponseDTO> createNotification(
-            @Valid @RequestBody NotificationRequestDTO requestDTO) {
+            @Valid @RequestBody NotificationRequestDTO requestDTO,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
 
-        NotificationResponseDTO response = notificationService.createNotification(requestDTO);
+        NotificationResponseDTO response = notificationService.createNotification(requestDTO, authHeader);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "Create notifications in batch")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Notifications created"),
-            @ApiResponse(responseCode = "400", description = "Invalid input")
-    })
     @PostMapping("/batch")
     public ResponseEntity<List<NotificationResponseDTO>> createNotificationsBatch(
-            @Valid @RequestBody NotificationBatchRequestDTO requestDTO) {
+            @Valid @RequestBody NotificationBatchRequestDTO requestDTO,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(notificationService.createNotifications(requestDTO.getNotifications()));
+                .body(notificationService.createNotifications(requestDTO.getNotifications(), authHeader));
     }
 
     @Operation(summary = "Get all notifications")
     @GetMapping
-    public ResponseEntity<List<NotificationResponseDTO>> getAllNotifications() {
-        return ResponseEntity.ok(notificationService.getAllNotifications());
+    public ResponseEntity<List<NotificationResponseDTO>> getAllNotifications(
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(notificationService.getAllNotifications(authHeader));
     }
 
     @Operation(summary = "Get notification by id")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Notification found"),
-            @ApiResponse(responseCode = "404", description = "Notification not found")
-    })
     @GetMapping("/{id}")
-    public ResponseEntity<NotificationResponseDTO> getNotificationById(@PathVariable int id) {
-        return ResponseEntity.ok(notificationService.getNotificationById(id));
+    public ResponseEntity<NotificationResponseDTO> getNotificationById(
+            @PathVariable int id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(notificationService.getNotificationById(id, authHeader));
     }
 
     @Operation(summary = "Get notifications by user id")
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByUserId(@PathVariable int userId) {
-        return ResponseEntity.ok(notificationService.getNotificationsByUserId(userId));
+    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByUserId(
+            @PathVariable int userId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(notificationService.getNotificationsByUserId(userId, authHeader));
     }
 
     @Operation(summary = "Get notifications by plan id")
     @GetMapping("/plan/{planId}")
-    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByPlanId(@PathVariable int planId) {
-        return ResponseEntity.ok(notificationService.getNotificationsByPlanId(planId));
+    public ResponseEntity<List<NotificationResponseDTO>> getNotificationsByPlanId(
+            @PathVariable int planId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(notificationService.getNotificationsByPlanId(planId, authHeader));
     }
 
     @Operation(summary = "Update notification")
     @PutMapping("/{id}")
     public ResponseEntity<NotificationResponseDTO> updateNotification(
             @PathVariable int id,
-            @Valid @RequestBody NotificationRequestDTO requestDTO) {
-        return ResponseEntity.ok(notificationService.updateNotification(id, requestDTO));
+            @Valid @RequestBody NotificationRequestDTO requestDTO,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(notificationService.updateNotification(id, requestDTO, authHeader));
     }
 
     @Operation(summary = "Delete notification")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNotification(@PathVariable int id) {
-        notificationService.deleteNotification(id);
+    public ResponseEntity<Void> deleteNotification(
+            @PathVariable int id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        notificationService.deleteNotification(id, authHeader);
         return ResponseEntity.noContent().build();
     }
 }

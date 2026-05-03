@@ -26,8 +26,9 @@ public class BudgetController {
 
     @GetMapping
     @Operation(summary = "Get all budgets")
-    public ResponseEntity<List<BudgetResponseDTO>> getAllBudgets() {
-        return ResponseEntity.ok(budgetService.getAllBudgets());
+    public ResponseEntity<List<BudgetResponseDTO>> getAllBudgets(
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(budgetService.getAllBudgets(authHeader));
     }
 
     @GetMapping("/{id}")
@@ -36,16 +37,18 @@ public class BudgetController {
             @ApiResponse(responseCode = "200", description = "Budget found"),
             @ApiResponse(responseCode = "404", description = "Budget not found")
     })
-
-    public ResponseEntity<BudgetResponseDTO> getBudgetById(@PathVariable UUID id) {
-        return ResponseEntity.ok(budgetService.getBudgetById(id));
+    public ResponseEntity<BudgetResponseDTO> getBudgetById(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(budgetService.getBudgetById(id, authHeader));
     }
 
     @GetMapping("/plan/{planId}")
     @Operation(summary = "Get budgets by plan ID")
-
-    public ResponseEntity<List<BudgetResponseDTO>> getBudgetsByPlanId(@PathVariable UUID planId) {
-        return ResponseEntity.ok(budgetService.getBudgetsByPlanId(planId));
+    public ResponseEntity<List<BudgetResponseDTO>> getBudgetsByPlanId(
+            @PathVariable UUID planId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(budgetService.getBudgetsByPlanId(planId, authHeader));
     }
 
     @PostMapping
@@ -54,23 +57,27 @@ public class BudgetController {
             @ApiResponse(responseCode = "201", description = "Budget created"),
             @ApiResponse(responseCode = "400", description = "Invalid input data")
     })
-    public ResponseEntity<BudgetResponseDTO> createBudget(@Valid @RequestBody BudgetRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(budgetService.createBudget(dto));
+    public ResponseEntity<BudgetResponseDTO> createBudget(
+            @Valid @RequestBody BudgetRequestDTO dto,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.status(HttpStatus.CREATED).body(budgetService.createBudget(dto, authHeader));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Update a budget")
-
     public ResponseEntity<BudgetResponseDTO> updateBudget(
             @PathVariable UUID id,
-            @Valid @RequestBody BudgetRequestDTO dto) {
-        return ResponseEntity.ok(budgetService.updateBudget(id, dto));
+            @Valid @RequestBody BudgetRequestDTO dto,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(budgetService.updateBudget(id, dto, authHeader));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete a budget")
-    public ResponseEntity<Void> deleteBudget(@PathVariable UUID id) {
-        budgetService.deleteBudget(id);
+    public ResponseEntity<Void> deleteBudget(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        budgetService.deleteBudget(id, authHeader);
         return ResponseEntity.noContent().build();
     }
 }
