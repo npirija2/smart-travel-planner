@@ -1,6 +1,7 @@
 package com.travelplanner.planning_service.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,7 @@ import com.travelplanner.planning_service.dto.TravelPlanRequestDTO;
 import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
 import com.travelplanner.planning_service.service.TravelPlanService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 @RestController
@@ -74,9 +76,25 @@ public class TravelPlanController {
     public ResponseEntity<List<TravelPlanResponseDTO>> getByStatus(@PathVariable String status) {
         return ResponseEntity.ok(travelPlanService.getByStatus(status));
     }
-    @GetMapping("/test")
-    public String test() {
-        return "Response from " + port;
+    @GetMapping("/lb-test/{id}")
+    public ResponseEntity<Map<String, Object>> lbTest(
+            @PathVariable Long id,
+            HttpServletRequest request) throws InterruptedException {
+        
+        Thread.sleep(200); // simulira kompleksan DB upit 
+        
+        boolean exists;
+        try {
+            travelPlanService.getById(id);
+            exists = true;
+        } catch (Exception e) {
+            exists = false;
+        }
+        
+        return ResponseEntity.ok(Map.of(
+            "port", request.getLocalPort(),
+            "id", id,
+            "exists", exists
+        ));
     }
-
 }

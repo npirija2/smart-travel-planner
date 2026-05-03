@@ -1,56 +1,118 @@
 package com.travelplanner.planning_service;
 
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 public class LoadBalanceTest {
 
+    @Autowired
+    private RestTemplate restTemplate; // @LoadBalanced - ide kroz Eureku
+
+    @Autowired
+    @Qualifier("directTemplate")
+    private RestTemplate directRestTemplate; // direktno na 8082
+
+    private static final String LB_URL     = "http://PLANNING-SERVICE/api/travel-plans/lb-test/";
+    private static final String DIRECT_URL = "http://localhost:8082/api/travel-plans/lb-test/";
+    private static final int TOTAL_REQUESTS = 100;
+    private static final int THREADS        = 50;
+    private static final int MAX_ID         = 10;
+
+    private final ObjectMapper mapper = new ObjectMapper();
+
     @Test
-    void testLoadBalancing() {
+    void testLoadBalancing() throws InterruptedException {
 
-        RestTemplate restTemplate = new RestTemplate();
+        // SA LOAD BALANCINGOM
+        AtomicInteger count8082 = new AtomicInteger(0);
+        AtomicInteger count8083 = new AtomicInteger(0);
+        AtomicInteger lbErrors  = new AtomicInteger(0);
 
-        int count8082 = 0;
-        int count8083 = 0;
+        ExecutorService executor = Executors.newFixedThreadPool(THREADS);
+        CountDownLatch latch = new CountDownLatch(TOTAL_REQUESTS);
 
-        long start = System.currentTimeMillis();
+        long startLB = System.currentTimeMillis();
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < TOTAL_REQUESTS; i++) {
+            executor.submit(() -> {
+                try {
+                    int id = new Random().nextInt(MAX_ID) + 1;
+                    ResponseEntity<String> response = restTemplate
+                        .getForEntity(LB_URL + id, String.class);
+                    
+                    JsonNode json = mapper.readTree(response.getBody());
+                    int port = json.get("port").asInt();
 
-            String url = (i % 2 == 0)
-                    ? "http://localhost:8082/api/travel-plans/test"
-                    : "http://localhost:8083/api/travel-plans/test";
-
-            String response = restTemplate.getForObject(url, String.class);
-
-            if (response.contains("8082")) count8082++;
-            if (response.contains("8083")) count8083++;
+                    if (port == 8082) count8082.incrementAndGet();
+                    if (port == 8083) count8083.incrementAndGet();
+                } catch (Exception e) {
+                    lbErrors.incrementAndGet();
+                } finally {
+                    latch.countDown();
+                }
+            });
         }
 
-        long durationLB = System.currentTimeMillis() - start;
+        latch.await(60, TimeUnit.SECONDS);
+        long durationLB = System.currentTimeMillis() - startLB;
+        executor.shutdown();
 
-        System.out.println("=== SA LOAD BALANCINGOM ===");
-        System.out.println("Instanca 8082: " + count8082);
-        System.out.println("Instanca 8083: " + count8083);
-        System.out.println("Ukupno vrijeme: " + durationLB + " ms");
+        System.out.println("\nSA LOAD BALANCINGOM");
+        System.out.printf( "8082 : %3d zahtjeva          %n", count8082.get());
+        System.out.printf( "8083 : %3d zahtjeva          %n", count8083.get());
+        System.out.printf( "Ukupno vrijeme : %4d ms                %n", durationLB);
 
-        int directCount = 0;
+        Thread.sleep(2000);
 
-        start = System.currentTimeMillis();
+        // BEZ LOAD BALANCINGA
+        AtomicInteger directCount  = new AtomicInteger(0);
+        AtomicInteger directErrors = new AtomicInteger(0);
 
-        for (int i = 0; i < 100; i++) {
-            String response = restTemplate.getForObject(
-                "http://localhost:8082/api/travel-plans/test",
-                String.class
-            );
+        ExecutorService executor2 = Executors.newFixedThreadPool(THREADS);
+        CountDownLatch latch2 = new CountDownLatch(TOTAL_REQUESTS);
 
-            if (response.contains("8082")) directCount++;
+        long startDirect = System.currentTimeMillis();
+
+        for (int i = 0; i < TOTAL_REQUESTS; i++) {
+            executor2.submit(() -> {
+                try {
+                    int id = new Random().nextInt(MAX_ID) + 1;
+                    ResponseEntity<String> response = directRestTemplate
+                        .getForEntity(DIRECT_URL + id, String.class);
+                    
+                    JsonNode json = mapper.readTree(response.getBody());
+                    int port = json.get("port").asInt();
+
+                    if (port == 8082) directCount.incrementAndGet();
+                } catch (Exception e) {
+                    directErrors.incrementAndGet();
+                } finally {
+                    latch2.countDown();
+                }
+            });
         }
 
-        long durationNoLB = System.currentTimeMillis() - start;
+        latch2.await(60, TimeUnit.SECONDS);
+        long durationDirect = System.currentTimeMillis() - startDirect;
+        executor2.shutdown();
 
-        System.out.println("\n=== BEZ LOAD BALANCINGA ===");
-        System.out.println("Instanca 8082: " + directCount);
-        System.out.println("Ukupno vrijeme: " + durationNoLB + " ms");
+        System.out.println("\nBEZ LOAD BALANCINGA");
+        System.out.printf( " 8082 : %3d zahtjeva   %n", directCount.get());
+        System.out.printf( " Ukupno vrijeme : %4d ms         %n", durationDirect);
     }
 }
