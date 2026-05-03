@@ -7,6 +7,7 @@ import com.travelplanner.communication_service.exception.ResourceNotFoundExcepti
 import com.travelplanner.communication_service.exception.ServiceUnavailableException;
 import com.travelplanner.communication_service.model.Review;
 import com.travelplanner.communication_service.repository.ReviewRepository;
+import com.travelplanner.communication_service.util.JwtUtils; // DODANO
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -17,15 +18,19 @@ public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final PlanningServiceClient planningServiceClient;
+    private final JwtUtils jwtUtils; // DODANO
 
     public ReviewService(ReviewRepository reviewRepository,
-                         PlanningServiceClient planningServiceClient) {
+                         PlanningServiceClient planningServiceClient,
+                         JwtUtils jwtUtils) { // DODANO u konstruktor
         this.reviewRepository = reviewRepository;
         this.planningServiceClient = planningServiceClient;
+        this.jwtUtils = jwtUtils;
     }
 
-    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO) {
-        validateActivityExists(requestDTO.getActivityId());
+    public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, String authHeader) {
+        validateToken(authHeader);
+        validateActivityExists(requestDTO.getActivityId(), authHeader); // Prosljeđujemo token dalje
 
         Review review = new Review();
         review.setUserId(requestDTO.getUserId());
@@ -34,29 +39,31 @@ public class ReviewService {
         review.setComment(requestDTO.getComment());
 
         Review saved = reviewRepository.save(review);
-
         return mapToResponseDto(saved);
     }
 
-    public List<ReviewResponseDTO> getAllReviews() {
+    public List<ReviewResponseDTO> getAllReviews(String authHeader) {
+        validateToken(authHeader);
         return reviewRepository.findAll()
                 .stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
 
-    public ReviewResponseDTO getReviewById(int id) {
+    public ReviewResponseDTO getReviewById(int id, String authHeader) {
+        validateToken(authHeader);
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id " + id));
 
         return mapToResponseDto(review);
     }
 
-    public ReviewResponseDTO updateReview(int id, ReviewRequestDTO requestDto) {
+    public ReviewResponseDTO updateReview(int id, ReviewRequestDTO requestDto, String authHeader) {
+        validateToken(authHeader);
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id " + id));
 
-        validateActivityExists(requestDto.getActivityId());
+        validateActivityExists(requestDto.getActivityId(), authHeader);
 
         review.setUserId(requestDto.getUserId());
         review.setActivityId(requestDto.getActivityId());
@@ -64,38 +71,50 @@ public class ReviewService {
         review.setComment(requestDto.getComment());
 
         Review updated = reviewRepository.save(review);
-
         return mapToResponseDto(updated);
     }
 
-    public void deleteReview(int id) {
+    public void deleteReview(int id, String authHeader) {
+        validateToken(authHeader);
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id " + id));
 
         reviewRepository.delete(review);
     }
 
-    public List<ReviewResponseDTO> getReviewsByUserId(int userId) {
+    public List<ReviewResponseDTO> getReviewsByUserId(int userId, String authHeader) {
+        validateToken(authHeader);
         return reviewRepository.findByUserId(userId)
                 .stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
 
-    public List<ReviewResponseDTO> getReviewsByActivityId(int activityId) {
+    public List<ReviewResponseDTO> getReviewsByActivityId(int activityId, String authHeader) {
+        validateToken(authHeader);
         return reviewRepository.findByActivityId(activityId)
                 .stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
     }
 
-    private void validateActivityExists(int activityId) {
+    // POMOĆNA METODA ZA VALIDACIJU
+    private void validateToken(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Invalid or missing Authorization header");
+        }
+        jwtUtils.getClaims(authHeader.substring(7));
+    }
+
+    // DODANO: Sada prima i authHeader
+    private void validateActivityExists(int activityId, String authHeader) {
         Boolean exists;
 
         try {
-            exists = planningServiceClient.activityExists((long) activityId);
+            // TOKEN RELAY: Prosljeđujemo authHeader u Planning Service poziv
+            exists = planningServiceClient.activityExists((long) activityId, authHeader);
         } catch (Exception e) {
-            throw new ServiceUnavailableException("Planning service trenutno nije dostupan. Nije moguće provjeriti aktivnost.");
+            throw new ServiceUnavailableException("Planning service trenutno nije dostupan.");
         }
 
         if (exists == null || !exists) {
@@ -110,7 +129,6 @@ public class ReviewService {
         dto.setActivityId(review.getActivityId());
         dto.setRating(review.getRating());
         dto.setComment(review.getComment());
-
         return dto;
     }
 }
