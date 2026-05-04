@@ -39,6 +39,7 @@ public class TravelPlanService {
         return (String) jwtUtils.getClaims(token).get("role");
     }
 
+    @Transactional(readOnly = true)
     public List<TravelPlanResponseDTO> getAll(String authHeader) {
         Long userId = getUserIdFromToken(authHeader);
         String role = getUserRoleFromToken(authHeader);
@@ -55,6 +56,7 @@ public class TravelPlanService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public TravelPlanResponseDTO getById(Long id, String authHeader) {
         TravelPlan travelPlan = travelPlanRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Travel plan not found"));
