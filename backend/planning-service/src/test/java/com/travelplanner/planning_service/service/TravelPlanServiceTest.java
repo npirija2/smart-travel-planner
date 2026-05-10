@@ -8,6 +8,9 @@ import com.travelplanner.planning_service.model.Destination;
 import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
+import com.travelplanner.planning_service.util.JwtUtils;
+import io.jsonwebtoken.Claims;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,9 +23,12 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class TravelPlanServiceTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Mock
     private TravelPlanRepository travelPlanRepository;
@@ -30,8 +36,21 @@ class TravelPlanServiceTest {
     @Mock
     private DestinationRepository destinationRepository;
 
+    @Mock
+    private JwtUtils jwtUtils;
+
+    @Mock
+    private Claims claims;
+
     @InjectMocks
     private TravelPlanService travelPlanService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(jwtUtils.getClaims("test-token")).thenReturn(claims);
+        lenient().when(claims.getSubject()).thenReturn("1");
+        lenient().when(claims.get("role")).thenReturn("ROLE_USER");
+    }
 
     @Test
     void getById_returnsDto_whenExists() {
@@ -53,7 +72,7 @@ class TravelPlanServiceTest {
 
         given(travelPlanRepository.findById(1L)).willReturn(Optional.of(plan));
 
-        TravelPlanResponseDTO result = travelPlanService.getById(1L);
+        TravelPlanResponseDTO result = travelPlanService.getById(1L, AUTH_HEADER);
 
         assertEquals("Plan", result.getName());
         assertEquals("Rim", result.getDestinationName());
@@ -63,7 +82,7 @@ class TravelPlanServiceTest {
     void getById_throwsResourceNotFoundException_whenMissing() {
         given(travelPlanRepository.findById(9999L)).willReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> travelPlanService.getById(9999L));
+        assertThrows(ResourceNotFoundException.class, () -> travelPlanService.getById(9999L, AUTH_HEADER));
     }
 
     @Test
@@ -75,7 +94,7 @@ class TravelPlanServiceTest {
                 .destinationId(2L)
                 .build();
 
-        assertThrows(BadRequestException.class, () -> travelPlanService.create(request));
+        assertThrows(BadRequestException.class, () -> travelPlanService.create(request, AUTH_HEADER));
     }
 
     @Test
@@ -89,7 +108,7 @@ class TravelPlanServiceTest {
 
         given(destinationRepository.findById(2L)).willReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> travelPlanService.create(request));
+        assertThrows(ResourceNotFoundException.class, () -> travelPlanService.create(request, AUTH_HEADER));
     }
 
     @Test
@@ -123,7 +142,7 @@ class TravelPlanServiceTest {
         given(destinationRepository.findById(2L)).willReturn(Optional.of(destination));
         given(travelPlanRepository.save(any(TravelPlan.class))).willReturn(saved);
 
-        TravelPlanResponseDTO result = travelPlanService.create(request);
+        TravelPlanResponseDTO result = travelPlanService.create(request, AUTH_HEADER);
 
         assertEquals(10L, result.getId());
         assertEquals("Plan", result.getName());

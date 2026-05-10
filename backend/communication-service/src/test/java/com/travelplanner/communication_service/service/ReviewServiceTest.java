@@ -7,6 +7,7 @@ import com.travelplanner.communication_service.exception.ResourceNotFoundExcepti
 import com.travelplanner.communication_service.exception.ServiceUnavailableException;
 import com.travelplanner.communication_service.model.Review;
 import com.travelplanner.communication_service.repository.ReviewRepository;
+import com.travelplanner.communication_service.util.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,16 +21,22 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Mock
     private ReviewRepository reviewRepository;
 
     @Mock
     private PlanningServiceClient planningServiceClient;
+
+    @Mock
+    private JwtUtils jwtUtils;
 
     @InjectMocks
     private ReviewService reviewService;
@@ -58,14 +65,14 @@ class ReviewServiceTest {
     @Test
     void shouldCreateReviewSuccessfully() {
         // Mock-amo provjeru aktivnosti (vraća true)
-        when(planningServiceClient.activityExists(500L)).thenReturn(true);
+        when(planningServiceClient.activityExists(500L, AUTH_HEADER)).thenReturn(true);
         when(reviewRepository.save(any(Review.class))).thenReturn(review);
 
-        ReviewResponseDTO response = reviewService.createReview(requestDTO);
+        ReviewResponseDTO response = reviewService.createReview(requestDTO, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals(5, response.getRating());
-        verify(planningServiceClient).activityExists(500L);
+        verify(planningServiceClient).activityExists(500L, AUTH_HEADER);
         verify(reviewRepository).save(any(Review.class));
     }
 
@@ -73,7 +80,7 @@ class ReviewServiceTest {
     void shouldReturnAllReviews() {
         when(reviewRepository.findAll()).thenReturn(List.of(review));
 
-        List<ReviewResponseDTO> result = reviewService.getAllReviews();
+        List<ReviewResponseDTO> result = reviewService.getAllReviews(AUTH_HEADER);
 
         assertEquals(1, result.size());
         assertEquals("Odlična aktivnost!", result.get(0).getComment());
@@ -83,7 +90,7 @@ class ReviewServiceTest {
     void shouldGetReviewById() {
         when(reviewRepository.findById(1)).thenReturn(Optional.of(review));
 
-        ReviewResponseDTO response = reviewService.getReviewById(1);
+        ReviewResponseDTO response = reviewService.getReviewById(1, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals(1, response.getId());
@@ -92,10 +99,10 @@ class ReviewServiceTest {
     @Test
     void shouldUpdateReviewSuccessfully() {
         when(reviewRepository.findById(1)).thenReturn(Optional.of(review));
-        when(planningServiceClient.activityExists(anyLong())).thenReturn(true);
+        when(planningServiceClient.activityExists(anyLong(), eq(AUTH_HEADER))).thenReturn(true);
         when(reviewRepository.save(any(Review.class))).thenReturn(review);
 
-        ReviewResponseDTO updated = reviewService.updateReview(1, requestDTO);
+        ReviewResponseDTO updated = reviewService.updateReview(1, requestDTO, AUTH_HEADER);
 
         assertNotNull(updated);
         verify(reviewRepository).save(any(Review.class));
@@ -106,7 +113,7 @@ class ReviewServiceTest {
         when(reviewRepository.findById(1)).thenReturn(Optional.of(review));
         doNothing().when(reviewRepository).delete(review);
 
-        reviewService.deleteReview(1);
+        reviewService.deleteReview(1, AUTH_HEADER);
 
         verify(reviewRepository).delete(review);
     }
@@ -116,10 +123,10 @@ class ReviewServiceTest {
     @Test
     void shouldThrowExceptionWhenActivityDoesNotExist() {
         // Mock-amo da aktivnost NE postoji
-        when(planningServiceClient.activityExists(500L)).thenReturn(false);
+        when(planningServiceClient.activityExists(500L, AUTH_HEADER)).thenReturn(false);
 
         assertThrows(ResourceNotFoundException.class, () -> {
-            reviewService.createReview(requestDTO);
+            reviewService.createReview(requestDTO, AUTH_HEADER);
         });
 
         // Provjeravamo da se spremanje u bazu NIKADA nije dogodilo
@@ -129,10 +136,10 @@ class ReviewServiceTest {
     @Test
     void shouldThrowServiceUnavailableWhenPlanningServiceFails() {
         // Simuliramo pad Planning servisa (baca Exception)
-        when(planningServiceClient.activityExists(anyLong())).thenThrow(new RuntimeException("Down"));
+        when(planningServiceClient.activityExists(anyLong(), eq(AUTH_HEADER))).thenThrow(new RuntimeException("Down"));
 
         assertThrows(ServiceUnavailableException.class, () -> {
-            reviewService.createReview(requestDTO);
+            reviewService.createReview(requestDTO, AUTH_HEADER);
         });
     }
 
@@ -141,7 +148,7 @@ class ReviewServiceTest {
         when(reviewRepository.findById(99)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> {
-            reviewService.getReviewById(99);
+            reviewService.getReviewById(99, AUTH_HEADER);
         });
     }
 }

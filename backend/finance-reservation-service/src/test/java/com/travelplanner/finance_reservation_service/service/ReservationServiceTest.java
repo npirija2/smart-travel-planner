@@ -6,6 +6,7 @@ import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundE
 import com.travelplanner.finance_reservation_service.mapper.ReservationMapper;
 import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
+import com.travelplanner.finance_reservation_service.util.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,11 +25,16 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
 
+    private static final String AUTH_HEADER = "Bearer test-token";
+
     @Mock
     private ReservationRepository reservationRepository;
 
     @Mock
     private ReservationMapper reservationMapper;
+
+    @Mock
+    private JwtUtils jwtUtils;
 
     @InjectMocks
     private ReservationService reservationService;
@@ -60,7 +66,7 @@ class ReservationServiceTest {
         when(reservationMapper.toResponseDTO(any(Reservation.class))).thenReturn(responseDTO);
 
         // Act
-        List<ReservationResponseDTO> result = reservationService.getAllReservations();
+        List<ReservationResponseDTO> result = reservationService.getAllReservations(AUTH_HEADER);
 
         // Assert
         assertNotNull(result);
@@ -75,7 +81,7 @@ class ReservationServiceTest {
         when(reservationMapper.toResponseDTO(reservation)).thenReturn(responseDTO);
 
         // Act
-        ReservationResponseDTO result = reservationService.getReservationById(reservationId);
+        ReservationResponseDTO result = reservationService.getReservationById(reservationId, AUTH_HEADER);
 
         // Assert
         assertNotNull(result);
@@ -89,7 +95,7 @@ class ReservationServiceTest {
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> {
-            reservationService.getReservationById(reservationId);
+            reservationService.getReservationById(reservationId, AUTH_HEADER);
         });
     }
 
@@ -101,7 +107,7 @@ class ReservationServiceTest {
         when(reservationMapper.toResponseDTO(any(Reservation.class))).thenReturn(responseDTO);
 
         // Act
-        ReservationResponseDTO result = reservationService.createReservation(requestDTO);
+        ReservationResponseDTO result = reservationService.createReservation(requestDTO, AUTH_HEADER);
 
         // Assert
         assertNotNull(result);
@@ -117,7 +123,7 @@ class ReservationServiceTest {
         // updateEntityFromDTO je void metoda, Mockito je po defaultu ignoriše (doNothing)
 
         // Act
-        ReservationResponseDTO result = reservationService.updateReservation(reservationId, requestDTO);
+        ReservationResponseDTO result = reservationService.updateReservation(reservationId, requestDTO, AUTH_HEADER);
 
         // Assert
         assertNotNull(result);
@@ -131,7 +137,7 @@ class ReservationServiceTest {
         when(reservationRepository.existsById(reservationId)).thenReturn(true);
 
         // Act
-        reservationService.deleteReservation(reservationId);
+        reservationService.deleteReservation(reservationId, AUTH_HEADER);
 
         // Assert
         verify(reservationRepository, times(1)).deleteById(reservationId);
@@ -144,7 +150,7 @@ class ReservationServiceTest {
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> {
-            reservationService.deleteReservation(reservationId);
+            reservationService.deleteReservation(reservationId, AUTH_HEADER);
         });
         verify(reservationRepository, never()).deleteById(any());
     }

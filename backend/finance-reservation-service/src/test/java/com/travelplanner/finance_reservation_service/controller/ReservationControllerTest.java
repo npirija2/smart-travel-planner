@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -16,6 +17,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,9 +32,14 @@ import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundE
 import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 import com.travelplanner.finance_reservation_service.service.ReservationService;
+import com.travelplanner.finance_reservation_service.util.JwtUtils;
+import io.jsonwebtoken.Claims;
 
 @WebMvcTest(ReservationController.class)
+@ActiveProfiles("test")
 class ReservationControllerTest {
+
+    private static final String AUTH_HEADER = "Bearer test-token";
 
     @Autowired
     private MockMvc mockMvc;
@@ -42,6 +49,9 @@ class ReservationControllerTest {
 
     @MockBean
     private ReservationRepository reservationRepository;
+
+    @MockBean
+    private JwtUtils jwtUtils;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -79,9 +89,9 @@ class ReservationControllerTest {
 
     @Test
     void shouldGetAllReservations() throws Exception {
-        when(reservationService.getAllReservations()).thenReturn(List.of(responseDTO));
+        when(reservationService.getAllReservations(AUTH_HEADER)).thenReturn(List.of(responseDTO));
 
-        mockMvc.perform(get("/api/reservations"))
+        mockMvc.perform(get("/api/reservations").header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].price").value(250.0));
@@ -89,9 +99,9 @@ class ReservationControllerTest {
 
     @Test
     void shouldGetReservationById() throws Exception {
-        when(reservationService.getReservationById(reservationId)).thenReturn(responseDTO);
+        when(reservationService.getReservationById(reservationId, AUTH_HEADER)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/reservations/" + reservationId))
+        mockMvc.perform(get("/api/reservations/" + reservationId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(reservationId.toString()));
     }
@@ -99,18 +109,19 @@ class ReservationControllerTest {
     @Test
     void shouldReturn404WhenReservationNotFound() throws Exception {
         UUID randomId = UUID.randomUUID();
-        when(reservationService.getReservationById(randomId))
+        when(reservationService.getReservationById(randomId, AUTH_HEADER))
                 .thenThrow(new ResourceNotFoundException("Not found"));
 
-        mockMvc.perform(get("/api/reservations/" + randomId))
+        mockMvc.perform(get("/api/reservations/" + randomId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void shouldCreateReservation() throws Exception {
-        when(reservationService.createReservation(any(ReservationRequestDTO.class))).thenReturn(responseDTO);
+        when(reservationService.createReservation(any(ReservationRequestDTO.class), eq(AUTH_HEADER))).thenReturn(responseDTO);
 
         mockMvc.perform(post("/api/reservations")
+                .header("Authorization", AUTH_HEADER)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
                 .andExpect(status().isCreated())
@@ -125,10 +136,12 @@ class ReservationControllerTest {
         reservation.setPlanId(planId);
         reservation.setPrice(250.0);
 
+        when(jwtUtils.getClaims("test-token")).thenReturn(mock(Claims.class));
         when(reservationRepository.findByPlanId(eq(planId), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(reservation)));
 
         mockMvc.perform(get("/api/reservations/plan/" + planId + "/paged")
+                .header("Authorization", AUTH_HEADER)
                 .param("page", "0")
                 .param("size", "10")
                 .param("sortBy", "price")
@@ -142,20 +155,22 @@ class ReservationControllerTest {
         Reservation premiumRes = new Reservation();
         premiumRes.setPrice(500.0);
 
+        when(jwtUtils.getClaims("test-token")).thenReturn(mock(Claims.class));
         when(reservationRepository.findPremiumReservations(eq(planId), any(Double.class)))
                 .thenReturn(List.of(premiumRes));
 
         mockMvc.perform(get("/api/reservations/plan/" + planId + "/premium")
+                .header("Authorization", AUTH_HEADER)
                 .param("minPrice", "300.0"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.price").value(500.0));
+                .andExpect(jsonPath("$[0].price").value(500.0));
     }
 
     @Test
     void shouldDeleteReservation() throws Exception {
-        doNothing().when(reservationService).deleteReservation(reservationId);
+        doNothing().when(reservationService).deleteReservation(reservationId, AUTH_HEADER);
 
-        mockMvc.perform(delete("/api/reservations/" + reservationId))
+        mockMvc.perform(delete("/api/reservations/" + reservationId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNoContent());
     }
 }

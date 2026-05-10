@@ -8,3 +8,11 @@ spring:
     hibernate:
       ddl-auto: create-drop
     open-in-view: false
+
+  cloud:
+    discovery:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false

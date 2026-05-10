@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.model.Review;
@@ -23,6 +24,7 @@ public class CommunicationServiceApplication {
 	}
 
 	@Bean
+	@Profile("!test")
 	CommandLineRunner run(NotificationRepository nRepo, ReviewRepository rRepo) {
 		return args -> {
 

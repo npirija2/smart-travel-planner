@@ -22,41 +22,53 @@ public class ReviewController {
 
     @PostMapping
     public ResponseEntity<ReviewResponseDTO> createReview(
-            @Valid @RequestBody ReviewRequestDTO requestDTO) {
+            @Valid @RequestBody ReviewRequestDTO requestDTO,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
 
-        ReviewResponseDTO response = reviewService.createReview(requestDTO);
+        ReviewResponseDTO response = reviewService.createReview(requestDTO, authHeader);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<ReviewResponseDTO>> getAllReviews() {
-        return ResponseEntity.ok(reviewService.getAllReviews());
+    public ResponseEntity<List<ReviewResponseDTO>> getAllReviews(
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(reviewService.getAllReviews(authHeader));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ReviewResponseDTO> getReviewById(@PathVariable int id) {
-        return ResponseEntity.ok(reviewService.getReviewById(id));
+    public ResponseEntity<ReviewResponseDTO> getReviewById(
+            @PathVariable int id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(reviewService.getReviewById(id, authHeader));
     }
 
     @GetMapping("/activity/{activityId}")
-    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByActivityId(@PathVariable int activityId) {
-        return ResponseEntity.ok(reviewService.getReviewsByActivityId(activityId));
+    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByActivityId(
+            @PathVariable int activityId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(reviewService.getReviewsByActivityId(activityId, authHeader));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByUserId(@PathVariable int userId) {
-        return ResponseEntity.ok(reviewService.getReviewsByUserId(userId));
+    public ResponseEntity<List<ReviewResponseDTO>> getReviewsByUserId(
+            @PathVariable int userId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(reviewService.getReviewsByUserId(userId, authHeader));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ReviewResponseDTO> updateReview(@PathVariable int id,
-                                                          @Valid @RequestBody ReviewRequestDTO dto) {
-        return ResponseEntity.ok(reviewService.updateReview(id, dto));
+    public ResponseEntity<ReviewResponseDTO> updateReview(
+            @PathVariable int id,
+            @Valid @RequestBody ReviewRequestDTO dto,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(reviewService.updateReview(id, dto, authHeader));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteReview(@PathVariable int id) {
-        reviewService.deleteReview(id);
+    public ResponseEntity<Void> deleteReview(
+            @PathVariable int id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        reviewService.deleteReview(id, authHeader);
         return ResponseEntity.noContent().build();
     }
 }

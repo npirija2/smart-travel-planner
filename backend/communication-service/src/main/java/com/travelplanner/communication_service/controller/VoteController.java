@@ -31,38 +31,49 @@ public class VoteController {
             @ApiResponse(responseCode = "400", description = "Invalid input or duplicate vote")
     })
     @PostMapping
-    public ResponseEntity<VoteResponseDTO> createVote(@Valid @RequestBody VoteRequestDTO requestDTO) {
-        return new ResponseEntity<>(voteService.createVote(requestDTO), HttpStatus.CREATED);
+    public ResponseEntity<VoteResponseDTO> createVote(
+            @Valid @RequestBody VoteRequestDTO requestDTO,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return new ResponseEntity<>(voteService.createVote(requestDTO, authHeader), HttpStatus.CREATED);
     }
 
     @Operation(summary = "Get all votes")
     @GetMapping
-    public ResponseEntity<List<VoteResponseDTO>> getAllVotes() {
-        return ResponseEntity.ok(voteService.getAllVotes());
+    public ResponseEntity<List<VoteResponseDTO>> getAllVotes(
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(voteService.getAllVotes(authHeader));
     }
 
     @Operation(summary = "Get vote by id")
     @GetMapping("/{id}")
-    public ResponseEntity<VoteResponseDTO> getVoteById(@PathVariable Integer id) {
-        return ResponseEntity.ok(voteService.getVoteById(id));
+    public ResponseEntity<VoteResponseDTO> getVoteById(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(voteService.getVoteById(id, authHeader));
     }
 
     @Operation(summary = "Get votes by user id")
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<VoteResponseDTO>> getVotesByUserId(@PathVariable Integer userId) {
-        return ResponseEntity.ok(voteService.getVotesByUserId(userId));
+    public ResponseEntity<List<VoteResponseDTO>> getVotesByUserId(
+            @PathVariable Integer userId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(voteService.getVotesByUserId(userId, authHeader));
     }
 
     @Operation(summary = "Get votes by activity id")
     @GetMapping("/activity/{activityId}")
-    public ResponseEntity<List<VoteResponseDTO>> getVotesByActivityId(@PathVariable Integer activityId) {
-        return ResponseEntity.ok(voteService.getVotesByActivityId(activityId));
+    public ResponseEntity<List<VoteResponseDTO>> getVotesByActivityId(
+            @PathVariable Integer activityId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(voteService.getVotesByActivityId(activityId, authHeader));
     }
 
     @Operation(summary = "Delete vote")
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVote(@PathVariable Integer id) {
-        voteService.deleteVote(id);
+    public ResponseEntity<Void> deleteVote(
+            @PathVariable Integer id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        voteService.deleteVote(id, authHeader);
         return ResponseEntity.noContent().build();
     }
 }

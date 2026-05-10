@@ -24,33 +24,41 @@ public class ExpenseController {
 
     @GetMapping
     @Operation(summary = "Get all expenses")
-    public ResponseEntity<List<ExpenseResponseDTO>> getAllExpenses() {
-        return ResponseEntity.ok(expenseService.getAllExpenses());
+    public ResponseEntity<List<ExpenseResponseDTO>> getAllExpenses(
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(expenseService.getAllExpenses(authHeader));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get expense by ID")
-    // Promijenjeno u UUID
-    public ResponseEntity<ExpenseResponseDTO> getExpenseById(@PathVariable UUID id) {
-        return ResponseEntity.ok(expenseService.getExpenseById(id));
+    public ResponseEntity<ExpenseResponseDTO> getExpenseById(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(expenseService.getExpenseById(id, authHeader));
     }
 
     @GetMapping("/plan/{planId}")
     @Operation(summary = "Get expenses by plan ID")
-    public ResponseEntity<List<ExpenseResponseDTO>> getExpensesByPlanId(@PathVariable UUID planId) {
-        return ResponseEntity.ok(expenseService.getExpensesByPlanId(planId));
+    public ResponseEntity<List<ExpenseResponseDTO>> getExpensesByPlanId(
+            @PathVariable UUID planId,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.ok(expenseService.getExpensesByPlanId(planId, authHeader));
     }
 
     @PostMapping
     @Operation(summary = "Create an expense")
-    public ResponseEntity<ExpenseResponseDTO> createExpense(@Valid @RequestBody ExpenseRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(expenseService.createExpense(dto));
+    public ResponseEntity<ExpenseResponseDTO> createExpense(
+            @Valid @RequestBody ExpenseRequestDTO dto,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        return ResponseEntity.status(HttpStatus.CREATED).body(expenseService.createExpense(dto, authHeader));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete an expense")
-    public ResponseEntity<Void> deleteExpense(@PathVariable UUID id) {
-        expenseService.deleteExpense(id);
+    public ResponseEntity<Void> deleteExpense(
+            @PathVariable UUID id,
+            @RequestHeader("Authorization") String authHeader) { // DODANO
+        expenseService.deleteExpense(id, authHeader);
         return ResponseEntity.noContent().build();
     }
 }
