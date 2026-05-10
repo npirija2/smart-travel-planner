@@ -33,7 +33,7 @@ const Planning = () => {
                 setFormData(prev => ({ ...prev, destinationId: destData.id }));
             }
         } catch (err) {
-            console.error("Greška pri učitavanju:", err);
+            console.error("Error loading data:", err);
         } finally {
             setLoading(false);
         }
@@ -43,7 +43,7 @@ const Planning = () => {
         e.preventDefault();
         try {
             await createTravelPlan(formData);
-            alert("Plan uspješno kreiran!");
+            alert("Plan created successfully!");
             setFormData({
                 ...formData,
                 name: '',
@@ -54,28 +54,28 @@ const Planning = () => {
             const updatedPlans = await getTravelPlans();
             setPlans(updatedPlans);
         } catch (err) {
-            alert("Greška: " + (err.response?.data?.message || "Provjerite bazu podataka"));
+            alert("Error: " + (err.response?.data?.message || "Check database connection"));
         }
     };
 
-    if (loading) return <div className="container">Učitavanje...</div>;
+    if (loading) return <div className="container">Loading...</div>;
 
     return (
         <div className="container">
             <div className="planning-header" style={{ marginBottom: '30px' }}>
-                <h2>✈️ Moji Planovi Putovanja</h2>
-                <p>Organizujte svoje sljedeće avanture i pratite status odobrenja.</p>
+                <h2>✈️ My Travel Plans</h2>
+                <p>Organize your next adventures and track approval status.</p>
             </div>
 
-            {/* FORMA ZA KREIRANJE */}
+            {/* CREATE PLAN FORM */}
             <section className="form-section" style={{ backgroundColor: '#fdfdfd', padding: '20px', borderRadius: '10px', border: '1px solid #eee', marginBottom: '40px' }}>
-                <h3 style={{ marginTop: 0 }}>Novi Plan</h3>
+                <h3 style={{ marginTop: 0 }}>New Plan</h3>
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                     <div className="form-group">
-                        <label>Naziv plana</label>
+                        <label>Plan Name</label>
                         <input 
                             type="text" 
-                            placeholder="npr. Ljetovanje 2026" 
+                            placeholder="e.g. Summer Vacation 2026" 
                             required
                             value={formData.name}
                             onChange={e => setFormData({...formData, name: e.target.value})} 
@@ -83,13 +83,13 @@ const Planning = () => {
                     </div>
 
                     <div className="form-group">
-                        <label>Odredište</label>
+                        <label>Destination</label>
                         <select 
                             value={formData.destinationId}
                             onChange={e => setFormData({...formData, destinationId: e.target.value})}
                             required
                         >
-                            <option value="">Odaberi destinaciju...</option>
+                            <option value="">Select a destination...</option>
                             {destinations.map(dest => (
                                 <option key={dest.id} value={dest.id}>
                                     {dest.name}
@@ -99,7 +99,7 @@ const Planning = () => {
                     </div>
 
                     <div className="form-group">
-                        <label>Datum polaska</label>
+                        <label>Start Date</label>
                         <input 
                             type="date" 
                             required
@@ -109,7 +109,7 @@ const Planning = () => {
                     </div>
 
                     <div className="form-group">
-                        <label>Datum povratka</label>
+                        <label>End Date</label>
                         <input 
                             type="date" 
                             required
@@ -119,31 +119,31 @@ const Planning = () => {
                     </div>
 
                     <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                        <label>Dodatne napomene</label>
+                        <label>Additional Notes</label>
                         <textarea 
-                            placeholder="Šta planirate posjetiti?" 
+                            placeholder="What are you planning to visit?" 
                             value={formData.description}
                             onChange={e => setFormData({...formData, description: e.target.value})} 
                         />
                     </div>
 
                     <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2', padding: '12px', fontSize: '1rem' }}>
-                        Sačuvaj Plan
+                        Save Plan
                     </button>
                 </form>
             </section>
 
-            {/* LISTA PLANOVA */}
+            {/* PLANS LIST */}
             <section className="list-section">
-                <h3>Aktivni planovi</h3>
+                <h3>Active Plans</h3>
                 {plans.length === 0 ? (
-                    <p style={{ color: '#666' }}>Trenutno nemate kreiranih planova.</p>
+                    <p style={{ color: '#666' }}>You currently have no travel plans created.</p>
                 ) : (
                     <table>
                         <thead>
                             <tr>
-                                <th>Naziv</th>
-                                <th>Destinacija</th>
+                                <th>Name</th>
+                                <th>Destination</th>
                                 <th>Period</th>
                                 <th>Status</th>
                             </tr>
@@ -152,9 +152,9 @@ const Planning = () => {
                             {plans.map(plan => (
                                 <tr key={plan.id}>
                                     <td style={{ fontWeight: '500' }}>{plan.name}</td>
-                                    <td>{plan.destinationName || 'Nije navedeno'}</td>
+                                    <td>{plan.destinationName || 'Not specified'}</td>
                                     <td style={{ fontSize: '0.9rem' }}>
-                                        {plan.startDate} do {plan.endDate}
+                                        {plan.startDate} to {plan.endDate}
                                     </td>
                                     <td>
                                         <span className={`status-badge ${plan.status?.toLowerCase()}`}>

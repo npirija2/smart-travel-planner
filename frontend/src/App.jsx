@@ -9,7 +9,7 @@ import './App.css';
 const Dashboard = () => (
     <div className="container" style={{ textAlign: 'center', marginTop: '50px' }}>
         <h1>🌍 Smart Travel Planner</h1>
-        <p>Vaš lični asistent za organizaciju putovanja u mikroservisnom okruženju.</p>
+        <p>Your personal assistant for travel organization in a microservices environment.</p>
     </div>
 );
 
@@ -32,7 +32,6 @@ function App() {
 
     return (
         <Router>
-            {/* MODERNA NAVIGACIJA */}
             <nav className="navbar">
                 <div className="nav-brand">
                     <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>SmartTravel</Link>
@@ -42,14 +41,14 @@ function App() {
                     
                     {!isLoggedIn ? (
                         <>
-                            <Link to="/login">Prijava</Link>
-                            <Link to="/register" className="btn-primary">Registracija</Link>
+                            <Link to="/login">Login</Link>
+                            <Link to="/register" className="btn-primary">Register</Link>
                         </>
                     ) : (
                         <>
-                            <Link to="/planning">Planiranje</Link>
+                            <Link to="/planning">Planning</Link>
                             <button onClick={handleLogout} className="logout-btn">
-                                Odjavi se
+                                Logout
                             </button>
                         </>
                     )}

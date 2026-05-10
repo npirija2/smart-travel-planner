@@ -4,7 +4,7 @@ const ProtectedRoute = ({ children }) => {
     const token = localStorage.getItem('token');
 
     if (!token) {
-        alert("Morate biti ulogovani da biste pristupili ovoj stranici!");
+        alert("You must be logged in to see this page!");
         return <Navigate to="/login" replace />;
     }
 
