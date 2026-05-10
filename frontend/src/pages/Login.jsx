@@ -8,9 +8,15 @@ const Login = () => {
     e.preventDefault();
     try {
       const token = await loginUser(formData.email, formData.password);
+      
       localStorage.setItem('token', token);
+      
+      window.dispatchEvent(new Event("storage"));
+      
       alert("Prijava uspješna!");
-      // Ovdje kasnije ide preusmjeravanje na Dashboard
+
+      window.location.href = "/planning"; 
+
     } catch (error) {
       console.error(error);
       alert("Greška pri prijavi: " + (error.response?.data || "Server nedostupan"));

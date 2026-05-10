@@ -1,27 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { getTravelPlans, createTravelPlan } from '../api/planService';
+import { getDestinations } from '../api/destinationService';
 
 const Planning = () => {
     const [plans, setPlans] = useState([]);
+    const [destinations, setDestinations] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
         name: '',
         startDate: '',
         endDate: '',
-        destinationId: 1, 
+        destinationId: '',
         description: '',
-        status: 'PENDING' 
+        status: 'PENDING'
     });
 
     useEffect(() => {
-        loadPlans();
+        loadData();
     }, []);
 
-    const loadPlans = async () => {
+    const loadData = async () => {
         try {
-            const data = await getTravelPlans();
-            setPlans(data);
+            setLoading(true);
+            const [plansData, destData] = await Promise.all([
+                getTravelPlans(),
+                getDestinations()
+            ]);
+            setPlans(plansData);
+            setDestinations(destData);
+            
+            if (destData.length > 0) {
+                setFormData(prev => ({ ...prev, destinationId: destData.id }));
+            }
         } catch (err) {
-            console.error("Greška pri učitavanju planova", err);
+            console.error("Greška pri učitavanju:", err);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -29,56 +43,130 @@ const Planning = () => {
         e.preventDefault();
         try {
             await createTravelPlan(formData);
-            alert("Plan kreiran! Čeka se potvrda sistema (Saga)...");
-            loadPlans(); 
+            alert("Plan uspješno kreiran!");
+            setFormData({
+                ...formData,
+                name: '',
+                startDate: '',
+                endDate: '',
+                description: ''
+            });
+            const updatedPlans = await getTravelPlans();
+            setPlans(updatedPlans);
         } catch (err) {
-            alert("Greška: " + (err.response?.data?.message || "Neuspješno"));
+            alert("Greška: " + (err.response?.data?.message || "Provjerite bazu podataka"));
         }
     };
 
+    if (loading) return <div className="container">Učitavanje...</div>;
+
     return (
-        <div style={{ padding: '20px' }}>
-            <h2>Moji Planovi Putovanja</h2>
-            
-            <form onSubmit={handleSubmit} style={{ marginBottom: '30px', border: '1px solid #ddd', padding: '15px' }}>
-                <h3>Novi Plan</h3>
-                <input type="text" placeholder="Naziv plana" required
-                    onChange={e => setFormData({...formData, name: e.target.value})} />
-                <input type="date" required
-                    onChange={e => setFormData({...formData, startDate: e.target.value})} />
-                <input type="date" required
-                    onChange={e => setFormData({...formData, endDate: e.target.value})} />
-                <textarea placeholder="Opis" 
-                    onChange={e => setFormData({...formData, description: e.target.value})} />
-                <button type="submit">Kreiraj Plan</button>
-            </form>
+        <div className="container">
+            <div className="planning-header" style={{ marginBottom: '30px' }}>
+                <h2>✈️ Moji Planovi Putovanja</h2>
+                <p>Organizujte svoje sljedeće avanture i pratite status odobrenja.</p>
+            </div>
+
+            {/* FORMA ZA KREIRANJE */}
+            <section className="form-section" style={{ backgroundColor: '#fdfdfd', padding: '20px', borderRadius: '10px', border: '1px solid #eee', marginBottom: '40px' }}>
+                <h3 style={{ marginTop: 0 }}>Novi Plan</h3>
+                <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                    <div className="form-group">
+                        <label>Naziv plana</label>
+                        <input 
+                            type="text" 
+                            placeholder="npr. Ljetovanje 2026" 
+                            required
+                            value={formData.name}
+                            onChange={e => setFormData({...formData, name: e.target.value})} 
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Odredište</label>
+                        <select 
+                            value={formData.destinationId}
+                            onChange={e => setFormData({...formData, destinationId: e.target.value})}
+                            required
+                        >
+                            <option value="">Odaberi destinaciju...</option>
+                            {destinations.map(dest => (
+                                <option key={dest.id} value={dest.id}>
+                                    {dest.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Datum polaska</label>
+                        <input 
+                            type="date" 
+                            required
+                            value={formData.startDate}
+                            onChange={e => setFormData({...formData, startDate: e.target.value})} 
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Datum povratka</label>
+                        <input 
+                            type="date" 
+                            required
+                            value={formData.endDate}
+                            onChange={e => setFormData({...formData, endDate: e.target.value})} 
+                        />
+                    </div>
+
+                    <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                        <label>Dodatne napomene</label>
+                        <textarea 
+                            placeholder="Šta planirate posjetiti?" 
+                            value={formData.description}
+                            onChange={e => setFormData({...formData, description: e.target.value})} 
+                        />
+                    </div>
+
+                    <button type="submit" className="btn-primary" style={{ gridColumn: 'span 2', padding: '12px', fontSize: '1rem' }}>
+                        Sačuvaj Plan
+                    </button>
+                </form>
+            </section>
 
             {/* LISTA PLANOVA */}
-            <table border="1" width="100%" style={{ borderCollapse: 'collapse' }}>
-                <thead>
-                    <tr>
-                        <th>Naziv</th>
-                        <th>Destinacija</th>
-                        <th>Period</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {plans.map(plan => (
-                        <tr key={plan.id}>
-                            <td>{plan.name}</td>
-                            <td>{plan.destinationName || plan.destinationId}</td>
-                            <td>{plan.startDate} do {plan.endDate}</td>
-                            <td style={{ 
-                                color: plan.status === 'REJECTED' ? 'red' : 
-                                       plan.status === 'CONFIRMED' ? 'green' : 'orange' 
-                            }}>
-                                {plan.status}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            <section className="list-section">
+                <h3>Aktivni planovi</h3>
+                {plans.length === 0 ? (
+                    <p style={{ color: '#666' }}>Trenutno nemate kreiranih planova.</p>
+                ) : (
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Naziv</th>
+                                <th>Destinacija</th>
+                                <th>Period</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {plans.map(plan => (
+                                <tr key={plan.id}>
+                                    <td style={{ fontWeight: '500' }}>{plan.name}</td>
+                                    <td>{plan.destinationName || 'Nije navedeno'}</td>
+                                    <td style={{ fontSize: '0.9rem' }}>
+                                        {plan.startDate} do {plan.endDate}
+                                    </td>
+                                    <td>
+                                        <span className={`status-badge ${plan.status?.toLowerCase()}`}>
+                                            {plan.status}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </section>
         </div>
     );
 };
