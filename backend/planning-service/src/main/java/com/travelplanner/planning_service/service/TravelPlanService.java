@@ -44,7 +44,7 @@ public class TravelPlanService {
         Long userId = getUserIdFromToken(authHeader);
         String role = getUserRoleFromToken(authHeader);
 
-        if ("ROLE_ADMIN".equals(role)) {
+        if ("ADMIN".equals(role)) {
             return travelPlanRepository.findAll().stream()
                     .map(this::mapToResponseDTO)
                     .toList();
@@ -63,7 +63,7 @@ public class TravelPlanService {
         Long userId = getUserIdFromToken(authHeader);
         String role = getUserRoleFromToken(authHeader);
 
-        if (!travelPlan.getOwnerId().equals(userId) && !"ROLE_ADMIN".equals(role)) {
+        if (!travelPlan.getOwnerId().equals(userId) && !"ADMIN".equals(role)) {
             throw new BadRequestException("You are not authorized to view this plan");
         }
 
@@ -100,7 +100,7 @@ public class TravelPlanService {
         Long userId = getUserIdFromToken(authHeader);
         String role = getUserRoleFromToken(authHeader);
 
-        if (!travelPlan.getOwnerId().equals(userId) && !"ROLE_ADMIN".equals(role)) {
+        if (!travelPlan.getOwnerId().equals(userId) && !"ADMIN".equals(role)) {
             throw new BadRequestException("You are not authorized to update this plan");
         }
 
@@ -125,7 +125,7 @@ public class TravelPlanService {
         Long userId = getUserIdFromToken(authHeader);
         String role = getUserRoleFromToken(authHeader);
 
-        if (!travelPlan.getOwnerId().equals(userId) && !"ROLE_ADMIN".equals(role)) {
+        if (!travelPlan.getOwnerId().equals(userId) && !"ADMIN".equals(role)) {
             throw new BadRequestException("You are not authorized to delete this plan");
         }
 

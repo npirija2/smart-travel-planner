@@ -65,7 +65,7 @@ class TravelPlanIntegrationTest {
         Claims claims = mock(Claims.class);
         when(jwtUtils.getClaims("test-token")).thenReturn(claims);
         when(claims.getSubject()).thenReturn("42");
-        when(claims.get("role")).thenReturn("ROLE_USER");
+        when(claims.get("role")).thenReturn("USER");
     }
 
     @Test
