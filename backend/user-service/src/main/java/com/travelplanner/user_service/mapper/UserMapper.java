@@ -17,7 +17,7 @@ public class UserMapper {
         user.setEmail(dto.getEmail());
         // Ovako mapiramo password iz DTO u entitet
         user.setPasswordHash(dto.getPassword());
-        user.setRole("ROLE_USER");
+        user.setRole("USER");
         
         return user;
     }
