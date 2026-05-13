@@ -2,6 +2,11 @@ server:
   port: ${SERVER_PORT:8083}
 
 spring:
+  rabbitmq:
+      host: localhost
+      port: 5672
+      username: guest
+      password: guest
   application:
     name: finance-reservation-service
 
@@ -34,3 +39,5 @@ eureka:
   client:
     service-url:
       defaultZone: http://localhost:8761/eureka
+
+    
