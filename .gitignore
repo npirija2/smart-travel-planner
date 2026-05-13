@@ -25,3 +25,10 @@ replay_pid*
 
 # Ignore all .env files in any directory
 **/.env
+
+# macOS Finder metadata
+**/.DS_Store
+
+# Maven / Gradle build output
+**/target/
+**/build/

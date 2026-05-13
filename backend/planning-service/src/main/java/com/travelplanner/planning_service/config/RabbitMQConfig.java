@@ -2,6 +2,7 @@ package com.travelplanner.planning_service.config;
 
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.annotation.EnableRabbit;
+import org.springframework.amqp.support.converter.DefaultJackson2JavaTypeMapper;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -81,6 +82,17 @@ public class RabbitMQConfig {
 
     @Bean
     public Jackson2JsonMessageConverter jackson2JsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        DefaultJackson2JavaTypeMapper typeMapper = new DefaultJackson2JavaTypeMapper();
+
+        typeMapper.setTrustedPackages(
+                "com.travelplanner.planning_service.messaging.event",
+                "com.travelplanner.finance_reservation_service.messaging.event"
+        );
+        // Use the listener method parameter type instead of the sender's FQCN header.
+        typeMapper.setTypePrecedence(DefaultJackson2JavaTypeMapper.TypePrecedence.INFERRED);
+        converter.setJavaTypeMapper(typeMapper);
+
+        return converter;
     }
 }
