@@ -41,7 +41,7 @@ public class UserService {
     public UserResponseDTO createUser(UserRequestDTO request) {
         User user = userMapper.toEntity(request);
         
-        // OVO JE KLJUČNO: Heširaj lozinku prije spašavanja!
+        // Heširaj lozinku prije spašavanja
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         
         // Ako u bazi role ne smije biti null, postavi default ako ga nema u requestu

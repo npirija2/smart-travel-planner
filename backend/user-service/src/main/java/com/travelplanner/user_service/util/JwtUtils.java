@@ -15,13 +15,13 @@ import io.jsonwebtoken.security.Keys;
 
 @Component
 public class JwtUtils {
-    // Koristi dugačak, nasumičan string za ključ
+
     private final String SECRET = "04ca678afcf2124351ea89602209537307981873b9875af1db0b222460ed6d10";
     private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
     public String generateToken(User user) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("role", user.getRole()); // Pod pretpostavkom da si dodao role u User model
+        claims.put("role", user.getRole()); // Pod pretpostavkom da su dodane role u User model
 
         return Jwts.builder()
                 .setClaims(claims)

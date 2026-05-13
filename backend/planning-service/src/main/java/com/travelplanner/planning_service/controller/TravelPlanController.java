@@ -13,7 +13,11 @@ import org.springframework.web.bind.annotation.*;
 
 import com.travelplanner.planning_service.dto.TravelPlanRequestDTO;
 import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
+import com.travelplanner.planning_service.model.PlanReservation;
 import com.travelplanner.planning_service.service.TravelPlanService;
+
+import com.travelplanner.planning_service.dto.PlanReservationRequestDTO;
+import com.travelplanner.planning_service.service.PlanReservationSagaService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -23,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/travel-plans")
 @RequiredArgsConstructor
 public class TravelPlanController {
-
+    private final PlanReservationSagaService planReservationSagaService;
     private final TravelPlanService travelPlanService;
 
     @Value("${server.port}")
@@ -95,5 +99,25 @@ public class TravelPlanController {
             "id", id,
             "exists", exists
         ));
+    }
+    @PostMapping("/{planId}/reservations")
+        public ResponseEntity<Map<String, Object>> requestReservationForPlan(
+                @PathVariable Long planId,
+                @Valid @RequestBody PlanReservationRequestDTO dto,
+                @RequestHeader("Authorization") String authHeader) {
+
+            Long planReservationId = planReservationSagaService.requestReservation(planId, dto, authHeader);
+
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(Map.of(
+                    "message", "Reservation saga process started.",
+                    "planId", planId,
+                    "planReservationId", planReservationId,
+                    "status", "PENDING"
+            ));
+    }
+
+    @GetMapping("/{planId}/reservations")
+    public ResponseEntity<List<PlanReservation>> getPlanReservations(@PathVariable Long planId) {
+        return ResponseEntity.ok(planReservationSagaService.getReservationsForPlan(planId));
     }
 }
