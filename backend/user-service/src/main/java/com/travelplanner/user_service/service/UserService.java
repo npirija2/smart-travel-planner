@@ -7,6 +7,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.travelplanner.user_service.dto.AuthResponseDTO;
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
 import com.travelplanner.user_service.exception.ResourceNotFoundException;
@@ -27,26 +28,27 @@ public class UserService {
     private final BCryptPasswordEncoder passwordEncoder;
 
     @Transactional
-    public String login(String email, String password) {
+    public AuthResponseDTO login(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Korisnik nije pronađen"));
+                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw new RuntimeException("Pogrešna lozinka");
+            throw new RuntimeException("Invalid credentials");
         }
-        return jwtUtils.generateToken(user);
+
+        String accessToken = jwtUtils.generateToken(user);
+        String refreshToken = jwtUtils.generateRefreshToken(user);
+
+        return new AuthResponseDTO(accessToken, refreshToken);
     }
 
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO request) {
         User user = userMapper.toEntity(request);
-        
-        // Heširaj lozinku prije spašavanja
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         
-        // Ako u bazi role ne smije biti null, postavi default ako ga nema u requestu
         if (user.getRole() == null) {
-            user.setRole("ROLE_USER");
+            user.setRole("USER");
         }
 
         User savedUser = userRepository.save(user);
@@ -56,7 +58,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponseDTO getUserById(Integer id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Korisnik sa ID-jem " + id + " nije pronađen"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
         return userMapper.toDto(user);
     }
 
@@ -70,11 +72,13 @@ public class UserService {
     @Transactional
     public UserResponseDTO updateUser(Integer id, UserRequestDTO request) {
         User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Korisnik sa ID-jem " + id + " nije pronađen"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
 
         existingUser.setUsername(request.getUsername());
         existingUser.setEmail(request.getEmail());
-        existingUser.setPasswordHash(request.getPassword());
+        existingUser.setPasswordHash(
+            passwordEncoder.encode(request.getPassword())
+        );
 
         User savedUser = userRepository.save(existingUser);
         return userMapper.toDto(savedUser);
@@ -83,8 +87,26 @@ public class UserService {
     @Transactional
     public void deleteUser(Integer id) {
         User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Korisnik sa ID-jem " + id + " nije pronađen"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
 
         userRepository.delete(existingUser);
+    }
+
+    @Transactional(readOnly = true)
+    public AuthResponseDTO refreshToken(String refreshToken) {
+
+        try {
+            Integer userId = jwtUtils.extractUserId(refreshToken);
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            String newAccessToken = jwtUtils.generateToken(user);
+
+            return new AuthResponseDTO(newAccessToken, refreshToken);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid refresh token");
+        }
     }
 }

@@ -1,5 +1,20 @@
 package com.travelplanner.planning_service.service;
 
+import java.time.LocalDate;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.lenient;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.travelplanner.planning_service.dto.TravelPlanRequestDTO;
 import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
 import com.travelplanner.planning_service.exception.BadRequestException;
@@ -9,21 +24,8 @@ import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
 import com.travelplanner.planning_service.util.JwtUtils;
+
 import io.jsonwebtoken.Claims;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.time.LocalDate;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class TravelPlanServiceTest {
@@ -49,7 +51,7 @@ class TravelPlanServiceTest {
     void setUp() {
         lenient().when(jwtUtils.getClaims("test-token")).thenReturn(claims);
         lenient().when(claims.getSubject()).thenReturn("1");
-        lenient().when(claims.get("role")).thenReturn("ROLE_USER");
+        lenient().when(claims.get("role")).thenReturn("USER");
     }
 
     @Test

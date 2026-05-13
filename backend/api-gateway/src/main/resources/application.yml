@@ -30,6 +30,8 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/api/users/**
+          filters:
+            - AuthenticationFilter
         - id: user-service-preferences
           uri: lb://user-service
           predicates:
