@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.travelplanner.finance_reservation_service.dto.ExpenseRequestDTO;
-import com.travelplanner.finance_reservation_service.dto.ExpenseResponseDTO; // DODANO
+import com.travelplanner.finance_reservation_service.dto.ExpenseResponseDTO;
 import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundException;
 import com.travelplanner.finance_reservation_service.mapper.ExpenseMapper;
 import com.travelplanner.finance_reservation_service.model.Expense;
@@ -49,7 +49,7 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponseDTO createExpense(ExpenseRequestDTO dto, String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader);
         Expense expense = expenseMapper.toEntity(dto);
         if (expense.getDate() == null) {
             expense.setDate(LocalDateTime.now());
@@ -60,7 +60,7 @@ public class ExpenseService {
 
     @Transactional
     public void deleteExpense(UUID id, String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader);
         if (!expenseRepository.existsById(id)) {
             throw new ResourceNotFoundException("Expense with ID " + id + " not found");
         }

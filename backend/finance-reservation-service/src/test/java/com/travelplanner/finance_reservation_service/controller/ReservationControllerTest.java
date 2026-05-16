@@ -33,6 +33,7 @@ import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 import com.travelplanner.finance_reservation_service.service.ReservationService;
 import com.travelplanner.finance_reservation_service.util.JwtUtils;
+
 import io.jsonwebtoken.Claims;
 
 @WebMvcTest(ReservationController.class)
@@ -70,7 +71,7 @@ class ReservationControllerTest {
         responseDTO = new ReservationResponseDTO();
         responseDTO.setId(reservationId);
         responseDTO.setPlanId(planId);
-        responseDTO.setType("Hotel"); // Dodano jer je @NotBlank u Requestu
+        responseDTO.setType("Hotel");
         responseDTO.setPrice(250.0);
         // Umjesto setDate, koristiš ova dva:
         responseDTO.setStartDate(now);
