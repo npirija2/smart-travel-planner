@@ -36,69 +36,99 @@ spring:
           uri: lb://user-service
           predicates:
             - Path=/api/preferences/**
+          filters:
+            - AuthenticationFilter
         - id: user-service-plan-memberships
           uri: lb://user-service
           predicates:
             - Path=/api/plan-memberships/**
+          filters:
+            - AuthenticationFilter
 
         - id: planning-service-travel-plans
           uri: lb://planning-service
           predicates:
             - Path=/api/travel-plans/**
+          filters:
+            - AuthenticationFilter
         - id: planning-service-activities
           uri: lb://planning-service
           predicates:
             - Path=/api/activities/**
+          filters:
+            - AuthenticationFilter
         - id: planning-service-days
           uri: lb://planning-service
           predicates:
             - Path=/api/days/**
+          filters:
+            - AuthenticationFilter
         - id: planning-service-categories
           uri: lb://planning-service
           predicates:
             - Path=/api/categories/**
+          filters:
+            - AuthenticationFilter
         - id: planning-service-destinations
           uri: lb://planning-service
           predicates:
             - Path=/api/destinations/**
+          filters:
+            - AuthenticationFilter
         - id: planning-service-activity-categories
           uri: lb://planning-service
           predicates:
             - Path=/api/activity-categories/**
+          filters:
+            - AuthenticationFilter
         - id: planning-service-locations
           uri: lb://planning-service
           predicates:
             - Path=/api/locations/**
-
+          filters:
+            - AuthenticationFilter
         - id: communication-service-notifications
           uri: lb://communication-service
           predicates:
             - Path=/api/notifications/**
+          filters:
+            - AuthenticationFilter
         - id: communication-service-reviews
           uri: lb://communication-service
           predicates:
             - Path=/api/reviews/**
+          filters:
+            - AuthenticationFilter
         - id: communication-service-votes
           uri: lb://communication-service
           predicates:
             - Path=/api/votes/**
+          filters:
+            - AuthenticationFilter
         - id: communication-service-shared-links
           uri: lb://communication-service
           predicates:
             - Path=/api/shared-links/**
-
+          filters:
+            - AuthenticationFilter
         - id: finance-service-budgets
           uri: lb://finance-reservation-service
           predicates:
             - Path=/api/budgets/**
+          filters:
+            - AuthenticationFilter
         - id: finance-service-expenses
           uri: lb://finance-reservation-service
           predicates:
             - Path=/api/expenses/**
+          filters:
+            - AuthenticationFilter
         - id: finance-service-reservations
           uri: lb://finance-reservation-service
           predicates:
             - Path=/api/reservations/**
+          filters:
+            - AuthenticationFilter
 
 eureka:
   client:
