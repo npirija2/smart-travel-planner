@@ -1,58 +1,68 @@
-import React, { useState } from 'react';
-import { loginUser } from '../api/userService';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const Login = () => {
-    const [formData, setFormData] = useState({ email: '', password: '' });
+export default function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            const token = await loginUser(formData.email, formData.password);
-            localStorage.setItem('token', token);
-            window.dispatchEvent(new Event("storage"));
-            alert("Login successful!");
-            window.location.href = "/planning"; 
-        } catch (error) {
-            alert("Login error: " + (error.response?.data || "Invalid email or password"));
-        }
-    };
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setErrorMessage('');
 
-    return (
-        <div className="container" style={{ maxWidth: '400px' }}>
-            <div className="auth-card">
-                <h2 style={{ textAlign: 'center', color: '#007bff' }}>Login</h2>
-                <p style={{ textAlign: 'center', color: '#666', marginBottom: '20px' }}>
-                    Enter your credentials to access your plans.
-                </p>
-                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                    <div className="form-group">
-                        <label>Email Address</label>
-                        <input 
-                            type="email" 
-                            placeholder="name@example.com" 
-                            required
-                            onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                        />
-                    </div>
-                    <div className="form-group">
-                        <label>Password</label>
-                        <input 
-                            type="password" 
-                            placeholder="••••••••" 
-                            required
-                            onChange={(e) => setFormData({...formData, password: e.target.value})} 
-                        />
-                    </div>
-                    <button type="submit" className="btn-primary" style={{ padding: '12px', marginTop: '10px' }}>
-                        Login
-                    </button>
-                </form>
-                <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '0.9rem' }}>
-                    Don't have an account? <a href="/register" style={{ color: '#007bff', textDecoration: 'none' }}>Register here</a>
-                </p>
-            </div>
-        </div>
-    );
-};
+    try {
+      await login(formData.email, formData.password);
+      navigate('/planning');
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message || 'We could not sign you in with those credentials.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
-export default Login;
+  return (
+    <section className="auth-page">
+      <div className="auth-panel">
+        <span className="eyebrow">Secure access</span>
+        <h1>Welcome back.</h1>
+        <p>Use your account to reach the full planning workspace without leaving the SPA flow.</p>
+      </div>
+      <div className="auth-card">
+        <h2>Sign in</h2>
+        <form className="form-stack" onSubmit={handleSubmit}>
+          <label>
+            Email
+            <input
+              required
+              type="email"
+              value={formData.email}
+              onChange={(event) => setFormData({ ...formData, email: event.target.value })}
+            />
+          </label>
+          <label>
+            Password
+            <input
+              required
+              type="password"
+              value={formData.password}
+              onChange={(event) => setFormData({ ...formData, password: event.target.value })}
+            />
+          </label>
+          {errorMessage && <div className="inline-error">{errorMessage}</div>}
+          <button className="primary-button" disabled={submitting} type="submit">
+            {submitting ? 'Signing in...' : 'Sign in'}
+          </button>
+        </form>
+        <p className="auth-switch">
+          No account yet? <Link to="/register">Create one</Link>
+        </p>
+      </div>
+    </section>
+  );
+}

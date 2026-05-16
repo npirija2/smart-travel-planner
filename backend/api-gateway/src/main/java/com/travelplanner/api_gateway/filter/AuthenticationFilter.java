@@ -26,9 +26,13 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
         return ((exchange, chain) -> {
             // Skip authentication for login, register and refresh endpoints
             String path = exchange.getRequest().getURI().getPath();
+            String method = exchange.getRequest().getMethod() != null
+                    ? exchange.getRequest().getMethod().name()
+                    : "";
             if (path.contains("/api/users/login")
                     || path.contains("/api/users/register")
-                    || path.contains("/api/users/refresh")) {
+                    || path.contains("/api/users/refresh")
+                    || (path.equals("/api/users") && method.equals("POST"))) {
 
                 return chain.filter(exchange);
             }

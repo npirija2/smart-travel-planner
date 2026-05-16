@@ -3,9 +3,11 @@ package com.travelplanner.user_service.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
+import com.travelplanner.user_service.exception.DuplicateResourceException;
 import com.travelplanner.user_service.exception.GlobalExceptionHandler;
 import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import com.travelplanner.user_service.service.UserService;
+import com.travelplanner.user_service.util.JwtUtils;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,6 +37,9 @@ public class UserControllerTest {
 
     @MockBean
     private UserService userService;
+
+    @MockBean
+    private JwtUtils jwtUtils;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -134,5 +139,24 @@ public class UserControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("validation"))
                 .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void whenDuplicateEmail_thenReturns409AndFriendlyMessage() throws Exception {
+        UserRequestDTO request = new UserRequestDTO();
+        request.setUsername("nejra");
+        request.setEmail("nejra@test.com");
+        request.setPassword("password123");
+
+        when(userService.createUser(any(UserRequestDTO.class)))
+                .thenThrow(new DuplicateResourceException("A user with this email already exists."));
+
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("conflict"))
+                .andExpect(jsonPath("$.message").value("A user with this email already exists."))
+                .andExpect(jsonPath("$.status").value(409));
     }
 }

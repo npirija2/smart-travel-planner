@@ -1,78 +1,88 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Planning from './pages/Planning';
 import ProtectedRoute from './components/ProtectedRoute';
-import './App.css'; 
+import './App.css';
 
-const Dashboard = () => (
-    <div className="container" style={{ textAlign: 'center', marginTop: '50px' }}>
-        <h1>🌍 Smart Travel Planner</h1>
-        <p>Your personal assistant for travel organization in a microservices environment.</p>
+function AppLayout() {
+  const { currentUser, isAuthenticated, logout, loading } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <div className="app-shell">
+      <header className="topbar">
+        <Link className="brand-mark" to="/">
+          <span className="brand-orb" />
+          <span className="brand-copy">
+            <strong>Smart Travel Planner</strong>
+            <span>Microservice-powered trip planning</span>
+          </span>
+        </Link>
+        <nav className="topbar-nav">
+          <Link to="/">Home</Link>
+          {isAuthenticated && <Link to="/planning">Workspace</Link>}
+          {!loading && !isAuthenticated && <Link to="/login">Login</Link>}
+          {!loading && !isAuthenticated && <Link to="/register">Register</Link>}
+        </nav>
+        <div className="topbar-actions">
+          {isAuthenticated && currentUser ? (
+            <>
+              <div className="session-pill">
+                <span>{currentUser.username}</span>
+                <small>{currentUser.email}</small>
+              </div>
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+                type="button"
+              >
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link className="primary-link" to="/register">
+              Start planning
+            </Link>
+          )}
+        </div>
+      </header>
+      <main className="page-shell">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route
+            path="/login"
+            element={isAuthenticated ? <Navigate replace to="/planning" /> : <Login />}
+          />
+          <Route
+            path="/register"
+            element={isAuthenticated ? <Navigate replace to="/planning" /> : <Register />}
+          />
+          <Route
+            path="/planning"
+            element={
+              <ProtectedRoute>
+                <Planning />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </main>
     </div>
-);
-
-function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
-
-    useEffect(() => {
-        const checkLogin = () => {
-            setIsLoggedIn(!!localStorage.getItem('token'));
-        };
-        window.addEventListener('storage', checkLogin);
-        return () => window.removeEventListener('storage', checkLogin);
-    }, []);
-
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
-        window.location.href = "/login"; 
-    };
-
-    return (
-        <Router>
-            <nav className="navbar">
-                <div className="nav-brand">
-                    <Link to="/" style={{ textDecoration: 'none', color: 'inherit' }}>SmartTravel</Link>
-                </div>
-                <div className="nav-links">
-                    <Link to="/">Dashboard</Link>
-                    
-                    {!isLoggedIn ? (
-                        <>
-                            <Link to="/login">Login</Link>
-                            <Link to="/register" className="btn-primary">Register</Link>
-                        </>
-                    ) : (
-                        <>
-                            <Link to="/planning">Planning</Link>
-                            <button onClick={handleLogout} className="logout-btn">
-                                Logout
-                            </button>
-                        </>
-                    )}
-                </div>
-            </nav>
-
-            <div className="main-content">
-                <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    
-                    <Route 
-                        path="/planning" 
-                        element={
-                            <ProtectedRoute>
-                                <Planning />
-                            </ProtectedRoute>
-                        } 
-                    />
-                </Routes>
-            </div>
-        </Router>
-    );
+  );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppLayout />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}

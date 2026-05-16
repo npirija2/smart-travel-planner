@@ -10,7 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.travelplanner.user_service.dto.AuthResponseDTO;
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
+import com.travelplanner.user_service.exception.DuplicateResourceException;
 import com.travelplanner.user_service.exception.ResourceNotFoundException;
+import com.travelplanner.user_service.exception.UnauthorizedException;
 import com.travelplanner.user_service.mapper.UserMapper;
 import com.travelplanner.user_service.model.User;
 import com.travelplanner.user_service.repository.UserRepository;
@@ -30,10 +32,10 @@ public class UserService {
     @Transactional
     public AuthResponseDTO login(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+                .orElseThrow(() -> new UnauthorizedException("Invalid credentials"));
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new UnauthorizedException("Invalid credentials");
         }
 
         String accessToken = jwtUtils.generateToken(user);
@@ -44,6 +46,10 @@ public class UserService {
 
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new DuplicateResourceException("A user with this email already exists.");
+        }
+
         User user = userMapper.toEntity(request);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         
@@ -74,6 +80,12 @@ public class UserService {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
 
+        userRepository.findByEmail(request.getEmail())
+                .filter(user -> !user.getId().equals(id))
+                .ifPresent(user -> {
+                    throw new DuplicateResourceException("A user with this email already exists.");
+                });
+
         existingUser.setUsername(request.getUsername());
         existingUser.setEmail(request.getEmail());
         existingUser.setPasswordHash(
@@ -99,14 +111,14 @@ public class UserService {
             Integer userId = jwtUtils.extractUserId(refreshToken);
 
             User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new UnauthorizedException("User not found"));
 
             String newAccessToken = jwtUtils.generateToken(user);
 
             return new AuthResponseDTO(newAccessToken, refreshToken);
 
         } catch (Exception e) {
-            throw new RuntimeException("Invalid refresh token");
+            throw new UnauthorizedException("Invalid refresh token");
         }
     }
 }

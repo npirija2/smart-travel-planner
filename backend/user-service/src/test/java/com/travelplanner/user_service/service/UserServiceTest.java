@@ -2,6 +2,7 @@ package com.travelplanner.user_service.service;
 
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
+import com.travelplanner.user_service.exception.DuplicateResourceException;
 import com.travelplanner.user_service.exception.ResourceNotFoundException;
 import com.travelplanner.user_service.mapper.UserMapper;
 import com.travelplanner.user_service.model.User;
@@ -57,6 +58,7 @@ public class UserServiceTest {
 
     @Test
     void testCreateUser_Success() {
+        when(userRepository.findByEmail(requestDTO.getEmail())).thenReturn(Optional.empty());
         when(userMapper.toEntity(any())).thenReturn(user);
         when(passwordEncoder.encode(requestDTO.getPassword())).thenReturn("encoded-password");
         when(userRepository.save(any())).thenReturn(user);
@@ -70,8 +72,17 @@ public class UserServiceTest {
     }
 
     @Test
+    void testCreateUser_DuplicateEmail() {
+        when(userRepository.findByEmail(requestDTO.getEmail())).thenReturn(Optional.of(user));
+
+        assertThrows(DuplicateResourceException.class, () -> userService.createUser(requestDTO));
+    }
+
+    @Test
     void testUpdateUser_Success() {
         when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("updated@test.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("newpassword123")).thenReturn("encoded-password");
         when(userRepository.save(any())).thenReturn(user);
         when(userMapper.toDto(any())).thenReturn(UserResponseDTO.builder().username("updated").email("updated@test.com").build());
 
@@ -85,6 +96,20 @@ public class UserServiceTest {
         assertNotNull(response);
         assertEquals("updated", response.getUsername());
         verify(userRepository, times(1)).save(user);
+    }
+
+    @Test
+    void testUpdateUser_DuplicateEmail() {
+        User existingOtherUser = User.builder().id(2).username("other").email("taken@test.com").build();
+        when(userRepository.findById(1)).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("taken@test.com")).thenReturn(Optional.of(existingOtherUser));
+
+        UserRequestDTO updateRequest = new UserRequestDTO();
+        updateRequest.setUsername("updated");
+        updateRequest.setEmail("taken@test.com");
+        updateRequest.setPassword("newpassword123");
+
+        assertThrows(DuplicateResourceException.class, () -> userService.updateUser(1, updateRequest));
     }
 
     @Test

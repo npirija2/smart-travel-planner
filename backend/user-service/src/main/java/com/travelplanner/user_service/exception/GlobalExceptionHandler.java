@@ -47,6 +47,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
+    @ExceptionHandler(DuplicateResourceException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateResource(DuplicateResourceException ex) {
+        ErrorResponse error = ErrorResponse.builder()
+                .error("conflict")
+                .message(ex.getMessage())
+                .status(HttpStatus.CONFLICT.value())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, MethodArgumentTypeMismatchException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
         ErrorResponse error = ErrorResponse.builder()
@@ -61,9 +73,8 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorResponse> handleRuntimeException(RuntimeException ex) {
-
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException ex) {
         ErrorResponse error = ErrorResponse.builder()
                 .error("unauthorized")
                 .message(ex.getMessage())
