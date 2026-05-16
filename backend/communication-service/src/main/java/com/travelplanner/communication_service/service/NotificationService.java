@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.travelplanner.communication_service.dto.NotificationRequestDTO;
 import com.travelplanner.communication_service.dto.NotificationResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
+import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
 import com.travelplanner.communication_service.util.JwtUtils;
@@ -103,13 +104,17 @@ public class NotificationService {
         notificationRepository.delete(notification);
     }
 
-    // POMOĆNA METODA ZA VALIDACIJU (da ne ponavljaš kod)
     private void validateToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
+            throw new UnauthorizedException(
+                    "Invalid or missing Authorization header");
         }
         String token = authHeader.substring(7);
-        jwtUtils.getClaims(token); // Ako token ne valja, ovdje će baciti Exception
+        try {
+            jwtUtils.getClaims(token);
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid token");
+        }
     }
 
     private Notification mapToEntity(NotificationRequestDTO requestDTO) {

@@ -7,7 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.travelplanner.communication_service.dto.SharedLinkRequestDTO;
 import com.travelplanner.communication_service.dto.SharedLinkResponseDTO;
-import com.travelplanner.communication_service.exception.ResourceNotFoundException; // DODANO
+import com.travelplanner.communication_service.exception.ResourceNotFoundException;
+import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.SharedLink;
 import com.travelplanner.communication_service.repository.SharedLinkRepository;
 import com.travelplanner.communication_service.util.JwtUtils;
@@ -80,10 +81,15 @@ public class SharedLinkService {
 
     private void validateToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
+            throw new UnauthorizedException(
+                    "Invalid or missing Authorization header");
         }
         String token = authHeader.substring(7);
-        jwtUtils.getClaims(token); // Validira potpis i datum isteka
+        try {
+            jwtUtils.getClaims(token);
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid token");
+        }
     }
 
     private SharedLinkResponseDTO mapToResponseDTO(SharedLink sharedLink) {

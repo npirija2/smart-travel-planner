@@ -1,28 +1,30 @@
 package com.travelplanner.communication_service.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
 import com.travelplanner.communication_service.client.PlanningServiceClient;
 import com.travelplanner.communication_service.dto.ReviewRequestDTO;
 import com.travelplanner.communication_service.dto.ReviewResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.exception.ServiceUnavailableException;
+import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.Review;
 import com.travelplanner.communication_service.repository.ReviewRepository;
-import com.travelplanner.communication_service.util.JwtUtils; // DODANO
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import com.travelplanner.communication_service.util.JwtUtils;
 
 @Service
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final PlanningServiceClient planningServiceClient;
-    private final JwtUtils jwtUtils; // DODANO
+    private final JwtUtils jwtUtils;
 
     public ReviewService(ReviewRepository reviewRepository,
                          PlanningServiceClient planningServiceClient,
-                         JwtUtils jwtUtils) { // DODANO u konstruktor
+                         JwtUtils jwtUtils) { 
         this.reviewRepository = reviewRepository;
         this.planningServiceClient = planningServiceClient;
         this.jwtUtils = jwtUtils;
@@ -98,15 +100,18 @@ public class ReviewService {
                 .collect(Collectors.toList());
     }
 
-    // POMOĆNA METODA ZA VALIDACIJU
     private void validateToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
+            throw new UnauthorizedException(
+                    "Invalid or missing Authorization header");
         }
-        jwtUtils.getClaims(authHeader.substring(7));
+        try {
+            jwtUtils.getClaims(authHeader.substring(7));
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid token");
+        }
     }
 
-    // DODANO: Sada prima i authHeader
     private void validateActivityExists(int activityId, String authHeader) {
         Boolean exists;
 
