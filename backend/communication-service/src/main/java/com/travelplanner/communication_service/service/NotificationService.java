@@ -1,29 +1,29 @@
 package com.travelplanner.communication_service.service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.travelplanner.communication_service.dto.NotificationRequestDTO;
 import com.travelplanner.communication_service.dto.NotificationResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
-import com.travelplanner.communication_service.util.JwtUtils; // DODAJ IMPORT
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import com.travelplanner.communication_service.util.JwtUtils;
 
 @Service
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final JwtUtils jwtUtils; // DODAJ OVO
+    private final JwtUtils jwtUtils;
 
-    public NotificationService(NotificationRepository notificationRepository, JwtUtils jwtUtils) { // DODAJ JwtUtils u konstruktor
+    public NotificationService(NotificationRepository notificationRepository, JwtUtils jwtUtils) {
         this.notificationRepository = notificationRepository;
         this.jwtUtils = jwtUtils;
     }
 
-    // DODAJ authHeader u svaku metodu
     public NotificationResponseDTO createNotification(NotificationRequestDTO requestDTO, String authHeader) {
         validateToken(authHeader); // Provjera validnosti na ulazu
         

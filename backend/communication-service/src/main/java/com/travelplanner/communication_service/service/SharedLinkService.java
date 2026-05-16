@@ -18,7 +18,7 @@ public class SharedLinkService {
     private final SharedLinkRepository sharedLinkRepository;
     private final JwtUtils jwtUtils; 
 
-    public SharedLinkService(SharedLinkRepository sharedLinkRepository, JwtUtils jwtUtils) { // AŽURIRAN KONSTRUKTOR
+    public SharedLinkService(SharedLinkRepository sharedLinkRepository, JwtUtils jwtUtils) {
         this.sharedLinkRepository = sharedLinkRepository;
         this.jwtUtils = jwtUtils;
     }
