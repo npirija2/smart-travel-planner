@@ -10,7 +10,7 @@ import com.travelplanner.finance_reservation_service.dto.BudgetRequestDTO;
 import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
 import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundException;
 import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
-import com.travelplanner.finance_reservation_service.model.Budget; // DODANO
+import com.travelplanner.finance_reservation_service.model.Budget;
 import com.travelplanner.finance_reservation_service.model.Expense;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;

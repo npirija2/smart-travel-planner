@@ -1,29 +1,30 @@
 package com.travelplanner.communication_service.service;
 
-import com.travelplanner.communication_service.dto.NotificationRequestDTO;
-import com.travelplanner.communication_service.dto.NotificationResponseDTO;
-import com.travelplanner.communication_service.exception.ResourceNotFoundException;
-import com.travelplanner.communication_service.model.Notification;
-import com.travelplanner.communication_service.repository.NotificationRepository;
-import com.travelplanner.communication_service.util.JwtUtils; // DODAJ IMPORT
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.travelplanner.communication_service.dto.NotificationRequestDTO;
+import com.travelplanner.communication_service.dto.NotificationResponseDTO;
+import com.travelplanner.communication_service.exception.ResourceNotFoundException;
+import com.travelplanner.communication_service.exception.UnauthorizedException;
+import com.travelplanner.communication_service.model.Notification;
+import com.travelplanner.communication_service.repository.NotificationRepository;
+import com.travelplanner.communication_service.util.JwtUtils;
 
 @Service
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final JwtUtils jwtUtils; // DODAJ OVO
+    private final JwtUtils jwtUtils;
 
-    public NotificationService(NotificationRepository notificationRepository, JwtUtils jwtUtils) { // DODAJ JwtUtils u konstruktor
+    public NotificationService(NotificationRepository notificationRepository, JwtUtils jwtUtils) {
         this.notificationRepository = notificationRepository;
         this.jwtUtils = jwtUtils;
     }
 
-    // DODAJ authHeader u svaku metodu
     public NotificationResponseDTO createNotification(NotificationRequestDTO requestDTO, String authHeader) {
         validateToken(authHeader); // Provjera validnosti na ulazu
         
@@ -103,13 +104,17 @@ public class NotificationService {
         notificationRepository.delete(notification);
     }
 
-    // POMOĆNA METODA ZA VALIDACIJU (da ne ponavljaš kod)
     private void validateToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
+            throw new UnauthorizedException(
+                    "Invalid or missing Authorization header");
         }
         String token = authHeader.substring(7);
-        jwtUtils.getClaims(token); // Ako token ne valja, ovdje će baciti Exception
+        try {
+            jwtUtils.getClaims(token);
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid token");
+        }
     }
 
     private Notification mapToEntity(NotificationRequestDTO requestDTO) {

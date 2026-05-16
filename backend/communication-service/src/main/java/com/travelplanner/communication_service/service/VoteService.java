@@ -7,7 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.travelplanner.communication_service.dto.VoteRequestDTO;
 import com.travelplanner.communication_service.dto.VoteResponseDTO;
-import com.travelplanner.communication_service.exception.ResourceNotFoundException; // DODANO
+import com.travelplanner.communication_service.exception.ResourceNotFoundException;
+import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.Vote;
 import com.travelplanner.communication_service.repository.VoteRepository;
 import com.travelplanner.communication_service.util.JwtUtils;
@@ -16,15 +17,15 @@ import com.travelplanner.communication_service.util.JwtUtils;
 public class VoteService {
 
     private final VoteRepository voteRepository;
-    private final JwtUtils jwtUtils; // DODANO
+    private final JwtUtils jwtUtils; 
 
-    public VoteService(VoteRepository voteRepository, JwtUtils jwtUtils) { // AŽURIRAN KONSTRUKTOR
+    public VoteService(VoteRepository voteRepository, JwtUtils jwtUtils) {
         this.voteRepository = voteRepository;
         this.jwtUtils = jwtUtils;
     }
 
     public VoteResponseDTO createVote(VoteRequestDTO requestDTO, String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader);
 
         boolean alreadyExists = voteRepository.existsByUserIdAndActivityId(
                 requestDTO.getUserId(),
@@ -44,7 +45,7 @@ public class VoteService {
     }
 
     public List<VoteResponseDTO> getAllVotes(String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader);
         return voteRepository.findAll()
                 .stream()
                 .map(this::mapToResponseDTO)
@@ -52,14 +53,14 @@ public class VoteService {
     }
 
     public VoteResponseDTO getVoteById(Integer id, String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader); 
         Vote vote = voteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vote not found with id " + id));
         return mapToResponseDTO(vote);
     }
 
     public List<VoteResponseDTO> getVotesByUserId(Integer userId, String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader); 
         return voteRepository.findByUserId(userId)
                 .stream()
                 .map(this::mapToResponseDTO)
@@ -67,7 +68,7 @@ public class VoteService {
     }
 
     public List<VoteResponseDTO> getVotesByActivityId(Integer activityId, String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader); 
         return voteRepository.findByActivityId(activityId)
                 .stream()
                 .map(this::mapToResponseDTO)
@@ -75,7 +76,7 @@ public class VoteService {
     }
 
     public void deleteVote(Integer id, String authHeader) {
-        validateToken(authHeader); // DODANO
+        validateToken(authHeader);
         Vote vote = voteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vote not found with id " + id));
         voteRepository.delete(vote);
@@ -83,10 +84,15 @@ public class VoteService {
 
     private void validateToken(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
+            throw new UnauthorizedException(
+                    "Invalid or missing Authorization header");
         }
         String token = authHeader.substring(7);
-        jwtUtils.getClaims(token); // Ako je token nevalidan, ovdje puca exception
+        try {
+            jwtUtils.getClaims(token);
+        } catch (Exception e) {
+            throw new UnauthorizedException("Invalid token");
+        }
     }
 
     private VoteResponseDTO mapToResponseDTO(Vote vote) {
