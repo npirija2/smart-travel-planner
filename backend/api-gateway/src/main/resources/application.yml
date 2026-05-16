@@ -129,6 +129,12 @@ spring:
             - Path=/api/reservations/**
           filters:
             - AuthenticationFilter
+        - id: finance-service-saga-reservations
+          uri: lb://finance-reservation-service
+          predicates:
+            - Path=/api/saga-reservations/**
+          filters:
+            - AuthenticationFilter
 
 eureka:
   client:

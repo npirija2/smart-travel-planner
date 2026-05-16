@@ -77,10 +77,6 @@ const defaultPlanForm = {
   status: 'PLANNED',
 };
 
-const defaultDestinationForm = {
-  name: '',
-};
-
 const defaultLocationForm = {
   name: '',
   destinationId: '',
@@ -284,38 +280,30 @@ function WorkspaceSection({ title, description, meta, defaultOpen = true, childr
 }
 
 const workspaceTabs = [
-  {
-    id: 'overview',
-    title: 'Overview',
-    description: 'Forecast, recommendations, and trip health',
-  },
-  {
-    id: 'itinerary',
-    title: 'Itinerary',
-    description: 'Days, activities, route order, and wait-time guidance',
-  },
-  {
-    id: 'finance',
-    title: 'Finance',
-    description: 'Budgets, expenses, reservations, and saga flow',
-  },
-  {
-    id: 'collaboration',
-    title: 'Collaboration',
-    description: 'Members, voting, and shared planning',
-  },
-  {
-    id: 'notifications',
-    title: 'Notifications',
-    description: 'Reminders, feed, and upcoming alerts',
-  },
+  { id: 'dashboard', title: 'Dashboard', description: 'Overview and current trip pulse', requiresPlan: false },
+  { id: 'create-plan', title: 'Create Travel Plan', description: 'Create a new trip and generate days', requiresPlan: false },
+  { id: 'route-optimization', title: 'Route Optimization', description: 'Suggested stop order and travel flow', requiresPlan: true },
+  { id: 'activity-scheduling', title: 'Activity Scheduling', description: 'Plan slots, times, and locations', requiresPlan: true },
+  { id: 'attractions', title: 'Attractions', description: 'Attraction ideas and preference fit', requiresPlan: true },
+  { id: 'weather-forecast', title: 'Weather Forecast', description: 'Forecast and weather-aware guidance', requiresPlan: true },
+  { id: 'budget-management', title: 'Budget Management', description: 'Budget, expenses, and projections', requiresPlan: true },
+  { id: 'collaborative-planning', title: 'Collaborative Planning', description: 'Members, roles, and team activity', requiresPlan: true },
+  { id: 'activity-voting', title: 'Activity Voting', description: 'Vote on activities before finalizing', requiresPlan: true },
+  { id: 'reservations', title: 'Reservations', description: 'Bookings and async reservation flow', requiresPlan: true },
+  { id: 'offline-access', title: 'Offline Access', description: 'Export PDF and offline snapshots', requiresPlan: true },
+  { id: 'notifications', title: 'Notifications', description: 'Reminders and alert timeline', requiresPlan: true },
+  { id: 'workload-analysis', title: 'Workload Analysis', description: 'Daily intensity and schedule balance', requiresPlan: true },
+  { id: 'local-recommendations', title: 'Local Recommendations', description: 'Restaurants and nearby events', requiresPlan: true },
+  { id: 'trip-sharing', title: 'Trip Sharing', description: 'Share links and plan distribution', requiresPlan: true },
+  { id: 'wait-time-analysis', title: 'Wait-Time Analysis', description: 'Queue estimates and visit windows', requiresPlan: true },
 ];
 
 export default function Planning() {
   const { currentUser, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [tripMenuOpen, setTripMenuOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -343,7 +331,6 @@ export default function Planning() {
   const [votesByActivity, setVotesByActivity] = useState({});
 
   const [planForm, setPlanForm] = useState(defaultPlanForm);
-  const [destinationForm, setDestinationForm] = useState(defaultDestinationForm);
   const [locationForm, setLocationForm] = useState(defaultLocationForm);
   const [activityForm, setActivityForm] = useState(defaultActivityForm);
   const [budgetForm, setBudgetForm] = useState(defaultBudgetForm);
@@ -424,9 +411,9 @@ export default function Planning() {
     [plans, selectedPlanId],
   );
 
-  const otherPlans = useMemo(
-    () => plans.filter((plan) => plan.id !== selectedPlanId),
-    [plans, selectedPlanId],
+  const currentMenu = useMemo(
+    () => workspaceTabs.find((item) => item.id === activeTab) || workspaceTabs[0],
+    [activeTab],
   );
 
   const selectedPlanDays = useMemo(
@@ -598,6 +585,24 @@ export default function Planning() {
     ],
   );
 
+  async function loadOptionalPlanResource(loader, fallback, options = {}) {
+    const { allowStatuses = [] } = options;
+
+    try {
+      return await loader();
+    } catch (error) {
+      if (error?.response?.status === 401) {
+        throw error;
+      }
+
+      if (allowStatuses.includes(error?.response?.status)) {
+        return fallback;
+      }
+
+      return fallback;
+    }
+  }
+
   useEffect(() => {
     const loadPlanScopedData = async () => {
       if (!selectedPlan || !currentUser) {
@@ -621,16 +626,18 @@ export default function Planning() {
           sharedLinkData,
           membershipData,
         ] = await Promise.all([
-          loadForecast(selectedPlan, locations),
-          getBudgetsByPlanId(financePlanId),
-          getExpensesByPlanId(financePlanId),
-          getPagedReservations(financePlanId),
-          getPremiumReservations(financePlanId, 150),
-          getSagaReservations(selectedPlan.id),
-          getPlanReservations(selectedPlan.id),
-          getNotificationsByUserId(currentUser.id),
-          getSharedLinksByPlanId(selectedPlan.id),
-          loadMembershipsForPlan(selectedPlan.id, users),
+          loadOptionalPlanResource(() => loadForecast(selectedPlan, locations), null),
+          loadOptionalPlanResource(() => getBudgetsByPlanId(financePlanId), []),
+          loadOptionalPlanResource(() => getExpensesByPlanId(financePlanId), []),
+          loadOptionalPlanResource(() => getPagedReservations(financePlanId), []),
+          loadOptionalPlanResource(() => getPremiumReservations(financePlanId, 150), []),
+          loadOptionalPlanResource(() => getSagaReservations(selectedPlan.id), [], {
+            allowStatuses: [404],
+          }),
+          loadOptionalPlanResource(() => getPlanReservations(selectedPlan.id), []),
+          loadOptionalPlanResource(() => getNotificationsByUserId(currentUser.id), []),
+          loadOptionalPlanResource(() => getSharedLinksByPlanId(selectedPlan.id), []),
+          loadOptionalPlanResource(() => loadMembershipsForPlan(selectedPlan.id, users), []),
         ]);
 
         setForecast(forecastData);
@@ -646,10 +653,10 @@ export default function Planning() {
         setOfflineSnapshot(loadOfflineSnapshot(selectedPlan.id));
 
         const voteEntries = await Promise.all(
-          currentPlanActivities.map(async (activity) => [
-            activity.id,
-            await getVotesByActivityId(activity.id),
-          ]),
+          currentPlanActivities.map(async (activity) => {
+            const votes = await loadOptionalPlanResource(() => getVotesByActivityId(activity.id), []);
+            return [activity.id, votes];
+          }),
         );
         setVotesByActivity(Object.fromEntries(voteEntries));
       } catch (error) {
@@ -752,6 +759,7 @@ export default function Planning() {
         destinationId: availableDestinations[0] ? String(availableDestinations[0].id) : '',
       });
       setFeedback('Travel plan created and its day structure was generated automatically.');
+      setActiveTab('dashboard');
     } catch (error) {
       setErrorMessage(error.response?.data?.message || 'Travel plan creation failed.');
     }
@@ -786,25 +794,6 @@ export default function Planning() {
       setFeedback('The travel plan was removed.');
     } catch (error) {
       setErrorMessage(error.response?.data?.message || 'Travel plan deletion failed.');
-    }
-  }
-
-  async function handleCreateDestination(event) {
-    event.preventDefault();
-
-    try {
-      await createDestination(destinationForm);
-      const refreshedDestinations = await getDestinations();
-      setDestinations(refreshedDestinations);
-      setDestinationForm(defaultDestinationForm);
-      const preferredDestination =
-        refreshedDestinations
-          .filter((destination) => !/^rabbitmq\b/i.test(destination.name || ''))
-          .sort((left, right) => left.name.localeCompare(right.name))[0] || refreshedDestinations[0];
-      setPlanForm((prev) => ({ ...prev, destinationId: preferredDestination ? String(preferredDestination.id) : '' }));
-      setFeedback('Destination added to the planning catalog.');
-    } catch (error) {
-      setErrorMessage(error.response?.data?.message || 'Destination creation failed.');
     }
   }
 
@@ -1213,7 +1202,7 @@ export default function Planning() {
       ...previous,
       totalAmount: `${budgetProjection.estimatedTotal}`,
     }));
-    setActiveTab('finance');
+    setActiveTab('budget-management');
     setFeedback('The estimated trip budget was copied into the budget form.');
   }
 
@@ -1222,188 +1211,111 @@ export default function Planning() {
   }
 
   return (
-    <div className="workspace-layout">
-      <aside className="workspace-sidebar">
-        <div className="panel-card trip-dashboard-card">
-          <span className="eyebrow">Trip dashboard</span>
-          {selectedPlan ? (
-            <>
-              <h1>Current trip</h1>
+    <div className="workspace-shell">
+      <aside className="workspace-rail">
+        <div className="workspace-rail-head">
+          <strong>Smart Travel Planner</strong>
+          <small>Trip dashboard</small>
+        </div>
+
+        <div className="workspace-rail-group">
+          <span className="workspace-rail-label">Menu</span>
+          <nav className="workspace-side-menu">
+            {workspaceTabs.filter((tab) => tab.id !== 'create-plan').map((tab) => (
               <button
-                className="plan-card is-selected"
-                onClick={() => setSelectedPlanId(selectedPlan.id)}
+                className={`workspace-side-link ${activeTab === tab.id ? 'is-active' : ''}`}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
                 type="button"
               >
-                <strong>{selectedPlan.name}</strong>
-                <span>{selectedPlan.destinationName}</span>
-                <small>
-                  {selectedPlan.startDate} → {selectedPlan.endDate}
-                </small>
+                <strong>{tab.title}</strong>
+                <small>{tab.description}</small>
               </button>
-            </>
-          ) : (
-            <>
-              <h1>Choose a trip</h1>
-              <p>Please select a plan so we can show additional information.</p>
-            </>
-          )}
-
-          {otherPlans.length > 0 && (
-            <div className="trip-dashboard-group">
-              <h2>Previous trips</h2>
-              <div className="plan-list">
-                {otherPlans.map((plan) => (
-                  <button
-                    className="plan-card"
-                    key={plan.id}
-                    onClick={() => setSelectedPlanId(plan.id)}
-                    type="button"
-                  >
-                    <strong>{plan.name}</strong>
-                    <span>{plan.destinationName}</span>
-                    <small>
-                      {plan.startDate} → {plan.endDate}
-                    </small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {!selectedPlan && plans.length > 0 && (
-            <div className="trip-dashboard-group">
-              <h2>Available trips</h2>
-              <div className="plan-list">
-                {plans.map((plan) => (
-                  <button
-                    className="plan-card"
-                    key={plan.id}
-                    onClick={() => setSelectedPlanId(plan.id)}
-                    type="button"
-                  >
-                    <strong>{plan.name}</strong>
-                    <span>{plan.destinationName}</span>
-                    <small>
-                      {plan.startDate} → {plan.endDate}
-                    </small>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+            ))}
+          </nav>
         </div>
-
-        <div className="panel-card workspace-nav-card">
-          <span className="eyebrow">Trip menu</span>
-          <h2>Sections</h2>
-          <p>
-            {selectedPlan
-              ? 'Everything for the selected trip is organized here.'
-              : 'Please select a plan so we can show additional information.'}
-          </p>
-          {selectedPlan ? (
-            <div className="workspace-nav-list">
-              {workspaceTabs.map((tab) => (
-                <button
-                  className={`workspace-nav-button ${activeTab === tab.id ? 'is-active' : ''}`}
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  type="button"
-                >
-                  <div className="workspace-nav-copy">
-                    <strong>{tab.title}</strong>
-                    <small>{tab.description}</small>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="subtle-note">Select a trip from the dashboard to unlock the trip menu.</div>
-          )}
-        </div>
-        <form className="panel-card form-stack" onSubmit={handleCreatePlan}>
-          <h2>Start a new trip</h2>
-          <label>
-            Plan name
-            <input
-              required
-              value={planForm.name}
-              onChange={(event) => setPlanForm({ ...planForm, name: event.target.value })}
-            />
-          </label>
-          <label>
-            Destination
-            <DestinationPicker
-              onChange={(destinationId) => setPlanForm({ ...planForm, destinationId })}
-              options={availableDestinations}
-              value={planForm.destinationId}
-            />
-          </label>
-          <div className="split-fields">
-            <label>
-              Start date
-              <input
-                required
-                type="date"
-                value={planForm.startDate}
-                onChange={(event) => setPlanForm({ ...planForm, startDate: event.target.value })}
-              />
-            </label>
-            <label>
-              End date
-              <input
-                required
-                type="date"
-                value={planForm.endDate}
-                onChange={(event) => setPlanForm({ ...planForm, endDate: event.target.value })}
-              />
-            </label>
-          </div>
-          <label>
-            Description
-            <textarea
-              rows="3"
-              value={planForm.description}
-              onChange={(event) => setPlanForm({ ...planForm, description: event.target.value })}
-            />
-          </label>
-          <button className="primary-button" type="submit">
-            Create plan and days
-          </button>
-        </form>
       </aside>
 
-      <section className="workspace-main">
-        {selectedPlan ? (
-          <>
-            <div className="headline-card">
-              <div>
-                <span className="eyebrow">Selected trip</span>
-                <h2>{selectedPlan.name}</h2>
-                <p>
-                  {selectedPlan.destinationName} • {selectedPlan.startDate} → {selectedPlan.endDate}
-                </p>
-              </div>
-              <div className="headline-actions">
-                <span className={`status-pill status-${selectedPlan.status?.toLowerCase()}`}>
-                  {selectedPlan.status}
-                </span>
-                <button className="secondary-button" onClick={handlePlanUpdate} type="button">
-                  Sync selected plan
-                </button>
-                <button
-                  className="danger-button"
-                  onClick={() => handleDeletePlan(selectedPlan.id)}
-                  type="button"
-                >
-                  Delete plan
-                </button>
-              </div>
+      <section className="workspace-stage">
+        <div className="workspace-stage-bar">
+          <div>
+            <span className="eyebrow">Workspace</span>
+            <h1>{currentMenu.title}</h1>
+          </div>
+          <div className="workspace-stage-bar-actions">
+            <button
+              className={activeTab === 'create-plan' ? 'secondary-button' : 'primary-button'}
+              onClick={() => setActiveTab(activeTab === 'create-plan' ? 'dashboard' : 'create-plan')}
+              type="button"
+            >
+              {activeTab === 'create-plan' ? 'Close Form' : 'New Plan'}
+            </button>
+            <div className="workspace-trips-menu">
+              <button className="workspace-current-pill" onClick={() => setTripMenuOpen((open) => !open)} type="button">
+                {selectedPlan ? `My Trips: ${selectedPlan.name}` : 'My Trips'}
+              </button>
+              {tripMenuOpen && (
+                <div className="workspace-trips-panel">
+                  <div className="workspace-trips-panel-head">
+                    <strong>My Trips</strong>
+                    <small>Choose the current or a previous plan.</small>
+                  </div>
+                  <div className="workspace-trips-list">
+                    {plans.map((plan) => (
+                      <button
+                        className={`workspace-trip-option ${selectedPlanId === plan.id ? 'is-active' : ''}`}
+                        key={plan.id}
+                        onClick={() => {
+                          setSelectedPlanId(plan.id);
+                          setTripMenuOpen(false);
+                        }}
+                        type="button"
+                      >
+                        <div>
+                          <strong>{plan.name}</strong>
+                          <span>{plan.destinationName}</span>
+                          <small>
+                            {plan.startDate} → {plan.endDate}
+                          </small>
+                        </div>
+                        <span className="status-pill status-muted">
+                          {selectedPlanId === plan.id ? 'Current' : 'Open'}
+                        </span>
+                      </button>
+                    ))}
+                    {plans.length === 0 && <div className="workspace-rail-empty">No travel plans yet.</div>}
+                  </div>
+                </div>
+              )}
             </div>
+            {selectedPlan ? (
+              <>
+                <button className="secondary-button" onClick={handlePlanUpdate} type="button">
+                  Sync
+                </button>
+                <button className="danger-button" onClick={() => handleDeletePlan(selectedPlan.id)} type="button">
+                  Delete
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
 
-            {feedback && <div className="inline-success">{feedback}</div>}
-            {errorMessage && <div className="inline-error">{errorMessage}</div>}
-            {refreshing && <div className="subtle-note">Refreshing plan-specific data...</div>}
+        {feedback && <div className="inline-success">{feedback}</div>}
+        {errorMessage && <div className="inline-error">{errorMessage}</div>}
+        {refreshing && selectedPlan && <div className="subtle-note">Refreshing plan-specific data...</div>}
+
+        {activeTab === 'dashboard' && (
+          <div className="workspace-stack">
+            <article className="panel-card workspace-hero-card">
+              <h2>Welcome to Smart Travel Planner</h2>
+              <p>Your comprehensive tool for planning, organizing, and managing travel itineraries.</p>
+              <div className="inline-actions">
+                <button className="primary-button" onClick={() => setActiveTab('create-plan')} type="button">
+                  Create New Travel Plan
+                </button>
+              </div>
+            </article>
 
             <div className="workspace-highlights">
               {workspaceHighlights.map((item) => (
@@ -1415,1271 +1327,844 @@ export default function Planning() {
               ))}
             </div>
 
-            {activeTab === 'overview' && (
-              <div className="workspace-stack">
-                <div className="workspace-metric-grid">
-                  <article className="panel-card">
-                    <h3>Weather outlook</h3>
-                    {forecast ? (
-                      <>
-                        <p className="metric-value">{forecast.temperature}</p>
-                        <p>{forecast.summary}</p>
-                        <small>
-                          {forecast.advice} • {forecast.source}
-                        </small>
-                      </>
-                    ) : (
-                      <p>No forecast available yet.</p>
-                    )}
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Schedule load analysis</h3>
-                    <p className="metric-value">{currentWorkload.level}</p>
-                    <p>Score: {Math.round(currentWorkload.score)}</p>
-                    <small>{currentWorkload.message}</small>
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Estimated trip cost</h3>
-                    <p className="metric-value">€{budgetProjection.estimatedTotal}</p>
-                    <p>{budgetProjection.summary}</p>
-                    <small>
-                      Budget gap: {budgetCoverage.difference >= 0 ? '+' : ''}
-                      {budgetCoverage.difference} EUR against saved budgets.
-                    </small>
-                    <div className="inline-actions">
-                      <button className="secondary-button" onClick={handleUseEstimatedBudget} type="button">
-                        Use estimate in budget form
-                      </button>
+            <article className="panel-card">
+              <h3>Your travel plans</h3>
+              <div className="dashboard-plan-list">
+                {plans.map((plan) => (
+                  <button
+                    className={`dashboard-plan-row ${selectedPlanId === plan.id ? 'is-active' : ''}`}
+                    key={plan.id}
+                    onClick={() => setSelectedPlanId(plan.id)}
+                    type="button"
+                  >
+                    <div>
+                      <strong>{plan.name}</strong>
+                      <span>{plan.destinationName}</span>
+                      <small>
+                        {plan.startDate} → {plan.endDate}
+                      </small>
                     </div>
-                  </article>
+                    <span className={`status-pill status-${plan.status?.toLowerCase()}`}>{plan.status}</span>
+                  </button>
+                ))}
+                {plans.length === 0 && <p>No plans yet. Open Create Travel Plan to get started.</p>}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {activeTab === 'create-plan' && (
+          <div className="workspace-create-layout">
+            <article className="panel-card workspace-create-card">
+              <h3>Create a travel plan</h3>
+              <p className="section-intro">
+                Choose a destination and date range. We will generate the trip days automatically after creation.
+              </p>
+              <form className="form-stack" onSubmit={handleCreatePlan}>
+                <label>
+                  Plan name
+                  <input
+                    required
+                    value={planForm.name}
+                    onChange={(event) => setPlanForm({ ...planForm, name: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Destination
+                  <DestinationPicker
+                    onChange={(destinationId) => setPlanForm({ ...planForm, destinationId })}
+                    options={availableDestinations}
+                    value={planForm.destinationId}
+                  />
+                </label>
+                <div className="split-fields">
+                  <label>
+                    Start date
+                    <input
+                      required
+                      type="date"
+                      value={planForm.startDate}
+                      onChange={(event) => setPlanForm({ ...planForm, startDate: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    End date
+                    <input
+                      required
+                      type="date"
+                      value={planForm.endDate}
+                      onChange={(event) => setPlanForm({ ...planForm, endDate: event.target.value })}
+                    />
+                  </label>
                 </div>
+                <label>
+                  Description
+                  <textarea
+                    rows="4"
+                    value={planForm.description}
+                    onChange={(event) => setPlanForm({ ...planForm, description: event.target.value })}
+                  />
+                </label>
+                <button className="primary-button" type="submit">
+                  Create plan and days
+                </button>
+              </form>
+            </article>
+          </div>
+        )}
 
-                <WorkspaceSection
-                  defaultOpen
-                  description="Attractions, restaurants, events, and timing guidance tuned to the selected destination."
-                  meta={`${attractionRecommendations.length + nearbySuggestions.length} suggestions`}
-                  title="Smart recommendations"
-                >
-                  <div className="content-grid">
-                    <article className="panel-card panel-span-two">
-                      <h3>Attraction recommendations</h3>
-                      <div className="chip-grid">
-                        {attractionRecommendations.map((location) => (
-                          <div className="insight-chip" key={location.id}>
-                            <strong>{location.name}</strong>
-                            <span>{location.type}</span>
-                            <small>{location.reason}</small>
-                          </div>
-                        ))}
-                        {attractionRecommendations.length === 0 && (
-                          <p>No attraction suggestions yet. Add locations or preferences first.</p>
-                        )}
-                      </div>
-                    </article>
-
-                    <article className="panel-card panel-span-two">
-                      <h3>Restaurants and nearby events</h3>
-                      <div className="chip-grid">
-                        {nearbySuggestions.map((location) => (
-                          <div className="insight-chip" key={location.id}>
-                            <strong>{location.name}</strong>
-                            <span>{location.type}</span>
-                            <small>{location.bestMoment}</small>
-                          </div>
-                        ))}
-                        {nearbySuggestions.length === 0 && (
-                          <p>Add restaurants, cafes, or event venues to unlock local suggestions.</p>
-                        )}
-                      </div>
-                    </article>
-
-                    <article className="panel-card panel-span-two">
-                      <h3>Weather-based activity guidance</h3>
-                      <div className="simple-list">
-                        {weatherActivityRecommendations.map((item) => (
-                          <div className="simple-row" key={item}>
-                            <strong>Recommendation</strong>
-                            <span>{item}</span>
-                          </div>
-                        ))}
-                        {weatherActivityRecommendations.length === 0 && (
-                          <p>Weather-aware guidance will appear after the forecast loads.</p>
-                        )}
-                      </div>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-
-                <WorkspaceSection
-                  defaultOpen={false}
-                  description="Manage preferences, offline packages, and the destination catalog without crowding the trip overview."
-                  meta={`${availableDestinations.length} destinations`}
-                  title="Trip toolkit"
-                >
-                  <div className="content-grid">
-                    <article className="panel-card">
-                      <h3>Offline access</h3>
-                      <p>Save the current plan snapshot locally for offline access during the trip.</p>
-                      <div className="inline-actions">
-                        <button className="secondary-button" onClick={handleSaveOffline} type="button">
-                          Save offline snapshot
-                        </button>
-                        <button className="primary-button" onClick={handleExportPdf} type="button">
-                          Download or print PDF
-                        </button>
-                        <button className="ghost-button" onClick={handleDownloadOfflinePlan} type="button">
-                          Download JSON
-                        </button>
-                      </div>
-                      {offlineSnapshot && (
-                        <small>
-                          Cached itinerary available with {offlineSnapshot.days.length} generated day entries.
-                        </small>
-                      )}
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Preference-driven suggestions</h3>
-                      <form className="form-stack" onSubmit={handleSavePreference}>
-                        <label>
-                          Preference type
-                          <select
-                            value={preferenceForm.preferenceType}
-                            onChange={(event) =>
-                              setPreferenceForm({
-                                ...preferenceForm,
-                                preferenceType: event.target.value,
-                              })
-                            }
-                          >
-                            <option>Interest</option>
-                            <option>Food</option>
-                            <option>Travel style</option>
-                          </select>
-                        </label>
-                        <label>
-                          Preference value
-                          <input
-                            required
-                            value={preferenceForm.preferenceValue}
-                            onChange={(event) =>
-                              setPreferenceForm({
-                                ...preferenceForm,
-                                preferenceValue: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                        <button className="secondary-button" type="submit">
-                          Save preference
-                        </button>
-                      </form>
-                      <div className="simple-list">
-                        {(currentUser.preferences || []).map((preference) => (
-                          <div className="simple-row" key={preference.id}>
-                            <strong>{preference.preferenceType}</strong>
-                            <span>{preference.preferenceValue}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </article>
-
-                    <article className="panel-card panel-span-two">
-                      <h3>Destination management</h3>
-                      <form className="form-stack" onSubmit={handleCreateDestination}>
-                        <label>
-                          New destination
-                          <input
-                            required
-                            value={destinationForm.name}
-                            onChange={(event) =>
-                              setDestinationForm({ ...destinationForm, name: event.target.value })
-                            }
-                          />
-                        </label>
-                        <button className="secondary-button" type="submit">
-                          Add destination
-                        </button>
-                      </form>
-                      <div className="simple-list">
-                        {availableDestinations.map((destination) => (
-                          <div className="simple-row" key={destination.id}>
-                            <strong>{destination.name}</strong>
-                            <span>ID {destination.id}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-              </div>
-            )}
-
-            {activeTab === 'itinerary' && (
-              <div className="workspace-stack">
-                <WorkspaceSection
-                  defaultOpen
-                  description="Create locations and activities in a focused editor before moving to the day-by-day itinerary."
-                  meta={`${selectedPlanDays.length} days`}
-                  title="Plan builder"
-                >
-                  <div className="workspace-two-column">
-                    <article className="panel-card">
-                      <h3>Add location</h3>
-                      <form className="form-stack" onSubmit={handleCreateLocation}>
-                        <label>
-                          Name
-                          <input
-                            required
-                            value={locationForm.name}
-                            onChange={(event) =>
-                              setLocationForm({ ...locationForm, name: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Destination
-                          <DestinationPicker
-                            onChange={(destinationId) =>
-                              setLocationForm({ ...locationForm, destinationId })
-                            }
-                            options={availableDestinations}
-                            value={locationForm.destinationId}
-                          />
-                        </label>
-                        <label>
-                          Address
-                          <input
-                            required
-                            value={locationForm.address}
-                            onChange={(event) =>
-                              setLocationForm({ ...locationForm, address: event.target.value })
-                            }
-                          />
-                        </label>
-                        <div className="split-fields">
-                          <label>
-                            Latitude
-                            <input
-                              value={locationForm.latitude}
-                              onChange={(event) =>
-                                setLocationForm({ ...locationForm, latitude: event.target.value })
-                              }
-                            />
-                          </label>
-                          <label>
-                            Longitude
-                            <input
-                              value={locationForm.longitude}
-                              onChange={(event) =>
-                                setLocationForm({ ...locationForm, longitude: event.target.value })
-                              }
-                            />
-                          </label>
-                        </div>
-                        <label>
-                          Type
-                          <input
-                            required
-                            value={locationForm.type}
-                            onChange={(event) =>
-                              setLocationForm({ ...locationForm, type: event.target.value })
-                            }
-                          />
-                        </label>
-                        <button className="secondary-button" type="submit">
-                          Save location
-                        </button>
-                      </form>
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Add activity</h3>
-                      <form className="form-stack" onSubmit={handleCreateActivity}>
-                        <label>
-                          Activity name
-                          <input
-                            required
-                            value={activityForm.name}
-                            onChange={(event) =>
-                              setActivityForm({ ...activityForm, name: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Day
-                          <select
-                            required
-                            value={activityForm.dayId}
-                            onChange={(event) =>
-                              setActivityForm({ ...activityForm, dayId: event.target.value })
-                            }
-                          >
-                            <option value="">Select day</option>
-                            {selectedPlanDays.map((day) => (
-                              <option key={day.id} value={day.id}>
-                                {day.date}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Location
-                          <select
-                            required
-                            value={activityForm.locationId}
-                            onChange={(event) =>
-                              setActivityForm({ ...activityForm, locationId: event.target.value })
-                            }
-                          >
-                            <option value="">Select location</option>
-                            {locations
-                              .filter((location) => location.destinationId === selectedPlan.destinationId)
-                              .map((location) => (
-                                <option key={location.id} value={location.id}>
-                                  {location.name}
-                                </option>
-                              ))}
-                          </select>
-                        </label>
-                        <label>
-                          Description
-                          <textarea
-                            rows="2"
-                            value={activityForm.description}
-                            onChange={(event) =>
-                              setActivityForm({ ...activityForm, description: event.target.value })
-                            }
-                          />
-                        </label>
-                        <div className="split-fields">
-                          <label>
-                            Timeslot
-                            <select
-                              value={activityForm.timeslot}
-                              onChange={(event) =>
-                                setActivityForm({ ...activityForm, timeslot: event.target.value })
-                              }
-                            >
-                              <option value="MORNING">Morning</option>
-                              <option value="NOON">Noon</option>
-                              <option value="EVENING">Evening</option>
-                            </select>
-                          </label>
-                          <label>
-                            Duration in minutes
-                            <input
-                              min="15"
-                              required
-                              type="number"
-                              value={activityForm.duration}
-                              onChange={(event) =>
-                                setActivityForm({ ...activityForm, duration: event.target.value })
-                              }
-                            />
-                          </label>
-                        </div>
-                        <div className="split-fields">
-                          <label>
-                            Start time
-                            <input
-                              required
-                              type="time"
-                              value={activityForm.startTime}
-                              onChange={(event) =>
-                                setActivityForm({ ...activityForm, startTime: event.target.value })
-                              }
-                            />
-                          </label>
-                          <label>
-                            End time
-                            <input
-                              required
-                              type="time"
-                              value={activityForm.endTime}
-                              onChange={(event) =>
-                                setActivityForm({ ...activityForm, endTime: event.target.value })
-                              }
-                            />
-                          </label>
-                        </div>
-                        <button className="primary-button" type="submit">
-                          Add activity
-                        </button>
-                        {activityConflictPreview && (
-                          <div className="inline-error">
-                            This slot overlaps with {activityConflictPreview.name}. Adjust the time before saving.
-                          </div>
-                        )}
-                      </form>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-
-                <WorkspaceSection
-                  defaultOpen
-                  description="Browse the auto-generated days, edit the schedule, and review route ordering for every stop."
-                  meta={`${currentPlanActivities.length} activities`}
-                  title="Day-by-day itinerary"
-                >
-                  <article className="panel-card">
-                    <div className="itinerary-columns">
-                      {selectedPlanDays.map((day) => (
-                        <section className="day-card" key={day.id}>
-                          <div className="day-card-header">
-                            <div>
-                              <strong>{day.date}</strong>
-                              <small>
-                                {(activitiesByDay.get(day.id) || []).length} scheduled activity
-                                {(activitiesByDay.get(day.id) || []).length === 1 ? '' : 'ies'}
-                              </small>
-                            </div>
-                            <span className="status-pill status-muted">
-                              {calculateWorkload(activitiesByDay.get(day.id) || []).level}
-                            </span>
-                          </div>
-                          <p className="day-support-copy">
-                            {calculateWorkload(activitiesByDay.get(day.id) || []).message}
-                          </p>
-
-                          <div className="simple-list">
-                            {(activitiesByDay.get(day.id) || []).map((activity) => (
-                              <div className="itinerary-item" key={activity.id}>
-                                <div>
-                                  <strong>{activity.name}</strong>
-                                  <p>{activity.locationName}</p>
-                                  <small>
-                                    {activity.timeslot} • {activity.startTime} → {activity.endTime} •{' '}
-                                    Wait estimate {estimateWaitTime(activity)} min
-                                  </small>
-                                  <small>Created by user {activity.createdBy}</small>
-                                </div>
-                                <div className="inline-actions">
-                                  <button
-                                    className="ghost-button"
-                                    onClick={() => handleActivityStatusChange(activity, 'DONE')}
-                                    type="button"
-                                  >
-                                    Mark done
-                                  </button>
-                                  <button
-                                    className="ghost-button danger"
-                                    onClick={() => handleDeleteActivity(activity.id)}
-                                    type="button"
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="route-box">
-                            <strong>Optimized route suggestion</strong>
-                            <small>
-                              {routeMetricsByDay[day.id]?.distanceKm} km •{' '}
-                              {routeMetricsByDay[day.id]?.transferMinutes} min transfer time
-                            </small>
-                            <ol>
-                              {(optimizedRoutesByDay[day.id] || []).map((activity) => (
-                                <li key={activity.id}>
-                                  {activity.name} — {activity.locationName}
-                                </li>
-                              ))}
-                            </ol>
-                            <p>{routeMetricsByDay[day.id]?.summary}</p>
-                          </div>
-                        </section>
-                      ))}
-                    </div>
-                  </article>
-                </WorkspaceSection>
-
-                <WorkspaceSection
-                  defaultOpen={false}
-                  description="Understand expected queues and pick smarter visit windows for crowded attractions."
-                  meta={`${waitTimeInsights.length} analyzed stops`}
-                  title="Wait-time analysis"
-                >
-                  <article className="panel-card">
-                    <div className="simple-list">
-                      {waitTimeInsights.map((insight) => (
-                        <div className="simple-row" key={insight.id}>
-                          <div>
-                            <strong>{insight.name}</strong>
-                            <span>{insight.locationName}</span>
-                          </div>
-                          <small>
-                            {insight.waitMinutes} min • {insight.bestWindow}
-                          </small>
-                        </div>
-                      ))}
-                      {waitTimeInsights.length === 0 && (
-                        <p>Add activities to unlock wait-time analysis and visit-window guidance.</p>
-                      )}
-                    </div>
-                  </article>
-                </WorkspaceSection>
-              </div>
-            )}
-
-            {activeTab === 'finance' && (
-              <div className="workspace-stack">
-                <div className="workspace-metric-grid">
-                  <article className="panel-card">
-                    <h3>Projected trip cost</h3>
-                    <p className="metric-value">€{budgetProjection.estimatedTotal}</p>
-                    <p>{budgetProjection.summary}</p>
-                    <small>{budgetProjection.perDay} EUR per day across the selected trip.</small>
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Booked reservation value</h3>
-                    <p className="metric-value">€{budgetProjection.bookedReservationTotal}</p>
-                    <p>{reservations.length} linked reservations</p>
-                    <small>{premiumReservations.length} premium reservations above the active threshold.</small>
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Budget balance</h3>
-                    <p className="metric-value">
-                      {budgetCoverage.difference >= 0 ? '+' : ''}
-                      {budgetCoverage.difference}€
-                    </p>
-                    <p>Saved budget: €{budgetCoverage.savedBudget}</p>
-                    <small>
-                      {budgetCoverage.difference >= 0
-                        ? 'You are currently above the forecast.'
-                        : 'You are currently below the forecast.'}
-                    </small>
-                  </article>
-                </div>
-
-                <WorkspaceSection
-                  defaultOpen
-                  description="Control the total trip budget, compare it with the estimate, and keep day-to-day spending organized."
-                  meta={`${budgets.length} budgets · ${expenses.length} expenses`}
-                  title="Budget and expense control"
-                >
-                  <div className="workspace-two-column">
-                    <article className="panel-card">
-                      <h3>Budget management</h3>
-                      <div className="finance-summary-card">
-                        <strong>Estimated total</strong>
-                        <span>€{budgetProjection.estimatedTotal}</span>
-                        <small>
-                          {budgetProjection.perDay} EUR per day • booked reservations €
-                          {budgetProjection.bookedReservationTotal}
-                        </small>
-                      </div>
-                      <form className="form-stack" onSubmit={handleCreateBudget}>
-                        <label>
-                          Total amount
-                          <input
-                            min="1"
-                            required
-                            type="number"
-                            value={budgetForm.totalAmount}
-                            onChange={(event) =>
-                              setBudgetForm({ ...budgetForm, totalAmount: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Currency
-                          <input
-                            value={budgetForm.currency}
-                            onChange={(event) =>
-                              setBudgetForm({ ...budgetForm, currency: event.target.value })
-                            }
-                          />
-                        </label>
-                        <button className="primary-button" type="submit">
-                          Save budget
-                        </button>
-                      </form>
-                      <div className="simple-list">
-                        {budgets.map((budget) => (
-                          <div className="simple-row" key={budget.id}>
-                            <div>
-                              <strong>{budget.totalAmount}</strong>
-                              <span>{budget.currency}</span>
-                            </div>
-                            <button
-                              className="ghost-button danger"
-                              onClick={() => handleDeleteBudget(budget.id)}
-                              type="button"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))}
-                        {budgets.length === 0 && <p>No saved budgets yet for this trip.</p>}
-                      </div>
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Expense tracker</h3>
-                      <div className="simple-list compact-list">
-                        <div className="simple-row">
-                          <strong>Dining projection</strong>
-                          <span>€{budgetProjection.diningProjection}</span>
-                        </div>
-                        <div className="simple-row">
-                          <strong>Mobility projection</strong>
-                          <span>€{budgetProjection.mobilityProjection}</span>
-                        </div>
-                        <div className="simple-row">
-                          <strong>Activity projection</strong>
-                          <span>€{budgetProjection.activityProjection}</span>
-                        </div>
-                        <div className="simple-row">
-                          <strong>Contingency reserve</strong>
-                          <span>€{budgetProjection.contingency}</span>
-                        </div>
-                      </div>
-                      <form className="form-stack" onSubmit={handleCreateExpense}>
-                        <label>
-                          Amount
-                          <input
-                            min="1"
-                            required
-                            type="number"
-                            value={expenseForm.amount}
-                            onChange={(event) =>
-                              setExpenseForm({ ...expenseForm, amount: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Category
-                          <input
-                            required
-                            value={expenseForm.category}
-                            onChange={(event) =>
-                              setExpenseForm({ ...expenseForm, category: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Date and time
-                          <input
-                            required
-                            type="datetime-local"
-                            value={expenseForm.date}
-                            onChange={(event) =>
-                              setExpenseForm({ ...expenseForm, date: event.target.value })
-                            }
-                          />
-                        </label>
-                        <button className="secondary-button" type="submit">
-                          Add expense
-                        </button>
-                      </form>
-                      <div className="simple-list">
-                        {expenses.map((expense) => (
-                          <div className="simple-row" key={expense.id}>
-                            <div>
-                              <strong>{expense.amount}</strong>
-                              <span>{expense.category}</span>
-                            </div>
-                            <button
-                              className="ghost-button danger"
-                              onClick={() => handleDeleteExpense(expense.id)}
-                              type="button"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))}
-                        {expenses.length === 0 && <p>No expenses logged yet for this trip.</p>}
-                      </div>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-
-                <WorkspaceSection
-                  defaultOpen
-                  description="Handle direct reservations and keep the asynchronous saga flow separate from the core budget editor."
-                  meta={`${reservations.length + planReservations.length + sagaReservations.length} reservation records`}
-                  title="Reservations and async booking flow"
-                >
-                  <div className="workspace-two-column">
-                    <article className="panel-card">
-                      <h3>Link a reservation</h3>
-                      <form className="form-stack" onSubmit={handleCreateReservation}>
-                        <label>
-                          Reservation type
-                          <input
-                            required
-                            value={reservationForm.type}
-                            onChange={(event) =>
-                              setReservationForm({ ...reservationForm, type: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Details
-                          <textarea
-                            rows="2"
-                            value={reservationForm.details}
-                            onChange={(event) =>
-                              setReservationForm({ ...reservationForm, details: event.target.value })
-                            }
-                          />
-                        </label>
-                        <div className="split-fields">
-                          <label>
-                            Start date
-                            <input
-                              required
-                              type="datetime-local"
-                              value={reservationForm.startDate}
-                              onChange={(event) =>
-                                setReservationForm({
-                                  ...reservationForm,
-                                  startDate: event.target.value,
-                                })
-                              }
-                            />
-                          </label>
-                          <label>
-                            End date
-                            <input
-                              required
-                              type="datetime-local"
-                              value={reservationForm.endDate}
-                              onChange={(event) =>
-                                setReservationForm({
-                                  ...reservationForm,
-                                  endDate: event.target.value,
-                                })
-                              }
-                            />
-                          </label>
-                        </div>
-                        <label>
-                          Price
-                          <input
-                            type="number"
-                            value={reservationForm.price}
-                            onChange={(event) =>
-                              setReservationForm({ ...reservationForm, price: event.target.value })
-                            }
-                          />
-                        </label>
-                        <button className="primary-button" type="submit">
-                          Link reservation
-                        </button>
-                      </form>
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Run async saga reservation</h3>
-                      <form className="form-stack" onSubmit={handleStartSagaReservation}>
-                        <label>
-                          Saga item name
-                          <input
-                            required
-                            value={sagaRequestForm.itemName}
-                            onChange={(event) =>
-                              setSagaRequestForm({ ...sagaRequestForm, itemName: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Reservation type
-                          <input
-                            required
-                            value={sagaRequestForm.reservationType}
-                            onChange={(event) =>
-                              setSagaRequestForm({
-                                ...sagaRequestForm,
-                                reservationType: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
-                        <div className="split-fields">
-                          <label>
-                            Start date
-                            <input
-                              required
-                              type="date"
-                              value={sagaRequestForm.startDate}
-                              onChange={(event) =>
-                                setSagaRequestForm({
-                                  ...sagaRequestForm,
-                                  startDate: event.target.value,
-                                })
-                              }
-                            />
-                          </label>
-                          <label>
-                            End date
-                            <input
-                              required
-                              type="date"
-                              value={sagaRequestForm.endDate}
-                              onChange={(event) =>
-                                setSagaRequestForm({
-                                  ...sagaRequestForm,
-                                  endDate: event.target.value,
-                                })
-                              }
-                            />
-                          </label>
-                        </div>
-                        <label>
-                          Amount
-                          <input
-                            required
-                            type="number"
-                            value={sagaRequestForm.amount}
-                            onChange={(event) =>
-                              setSagaRequestForm({ ...sagaRequestForm, amount: event.target.value })
-                            }
-                          />
-                        </label>
-                        <div className="toggle-row">
-                          <label>
-                            <input
-                              checked={sagaRequestForm.simulateFinanceFailure}
-                              type="checkbox"
-                              onChange={(event) =>
-                                setSagaRequestForm({
-                                  ...sagaRequestForm,
-                                  simulateFinanceFailure: event.target.checked,
-                                })
-                              }
-                            />
-                            Simulate finance failure
-                          </label>
-                          <label>
-                            <input
-                              checked={sagaRequestForm.simulatePlanningFinalizationFailure}
-                              type="checkbox"
-                              onChange={(event) =>
-                                setSagaRequestForm({
-                                  ...sagaRequestForm,
-                                  simulatePlanningFinalizationFailure: event.target.checked,
-                                })
-                              }
-                            />
-                            Simulate planning finalization failure
-                          </label>
-                        </div>
-                        <button className="secondary-button" type="submit">
-                          Start saga reservation
-                        </button>
-                      </form>
-                    </article>
-                  </div>
-
-                  <div className="triple-grid">
-                    <div className="panel-slab">
-                      <h4>Linked reservations</h4>
-                      {reservations.map((reservation) => (
-                        <div className="simple-row" key={reservation.id}>
-                          <div>
-                            <strong>{reservation.type}</strong>
-                            <span>{reservation.status}</span>
-                          </div>
-                          <button
-                            className="ghost-button danger"
-                            onClick={() => handleDeleteReservation(reservation.id)}
-                            type="button"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))}
-                      {reservations.length === 0 && <p>No linked reservations yet.</p>}
-                    </div>
-                    <div className="panel-slab">
-                      <h4>Premium reservations</h4>
-                      {premiumReservations.map((reservation) => (
-                        <div className="simple-row" key={reservation.id}>
-                          <strong>{reservation.type}</strong>
-                          <span>{reservation.price}</span>
-                        </div>
-                      ))}
-                      {premiumReservations.length === 0 && <p>No premium reservations matched the filter.</p>}
-                    </div>
-                    <div className="panel-slab">
-                      <h4>Async statuses</h4>
-                      {planReservations.map((reservation) => (
-                        <div className="simple-row" key={reservation.id}>
-                          <div>
-                            <strong>{reservation.itemName}</strong>
-                            <span>{reservation.status}</span>
-                          </div>
-                          <small>{reservation.failureReason || 'No failure reason'}</small>
-                        </div>
-                      ))}
-                      {sagaReservations.map((reservation) => (
-                        <div className="simple-row" key={reservation.id}>
-                          <div>
-                            <strong>Finance #{reservation.id}</strong>
-                            <span>{reservation.status}</span>
-                          </div>
-                          <small>{reservation.failureReason || 'Finance side finalized cleanly'}</small>
-                        </div>
-                      ))}
-                      {planReservations.length === 0 && sagaReservations.length === 0 && (
-                        <p>No async reservation statuses yet.</p>
-                      )}
-                    </div>
-                  </div>
-                </WorkspaceSection>
-              </div>
-            )}
-
-            {activeTab === 'collaboration' && (
-              <div className="workspace-stack">
-                <div className="workspace-metric-grid">
-                  <article className="panel-card">
-                    <h3>Members</h3>
-                    <p className="metric-value">{memberships.length}</p>
-                    <p>People currently attached to this trip.</p>
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Total votes</h3>
-                    <p className="metric-value">{collaborationMetrics.voteTotal}</p>
-                    <p>Votes collected for itinerary decisions.</p>
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Shared links</h3>
-                    <p className="metric-value">{sharedLinks.length}</p>
-                    <p>Share entries ready for review or distribution.</p>
-                  </article>
-                </div>
-
-                <WorkspaceSection
-                  defaultOpen
-                  description="Invite collaborators and assign permissions without mixing members into the voting view."
-                  meta={`${memberships.length} members`}
-                  title="Members and roles"
-                >
-                  <div className="workspace-two-column">
-                    <article className="panel-card">
-                      <h3>Add a plan member</h3>
-                      <form className="form-stack" onSubmit={handleCreateMembership}>
-                        <label>
-                          User
-                          <select
-                            required
-                            value={membershipForm.userId}
-                            onChange={(event) =>
-                              setMembershipForm({ ...membershipForm, userId: event.target.value })
-                            }
-                          >
-                            <option value="">Select user</option>
-                            {users.map((user) => (
-                              <option key={user.id} value={user.id}>
-                                {user.username}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                        <label>
-                          Role
-                          <select
-                            value={membershipForm.role}
-                            onChange={(event) =>
-                              setMembershipForm({ ...membershipForm, role: event.target.value })
-                            }
-                          >
-                            <option value="EDITOR">Editor</option>
-                            <option value="VIEWER">Viewer</option>
-                            <option value="OWNER">Owner</option>
-                          </select>
-                        </label>
-                        <button className="primary-button" type="submit">
-                          Add member
-                        </button>
-                      </form>
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Current team</h3>
-                      <div className="simple-list">
-                        {memberships.map((membership) => (
-                          <div className="simple-row" key={membership.id}>
-                            <strong>
-                              {users.find((user) => user.id === membership.userId)?.username ||
-                                `User ${membership.userId}`}
-                            </strong>
-                            <span>{membership.role}</span>
-                          </div>
-                        ))}
-                        {memberships.length === 0 && <p>No members added to this trip yet.</p>}
-                      </div>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-
-                <WorkspaceSection
-                  defaultOpen
-                  description="Track team participation and let the group push the best activities to the top."
-                  meta={`${currentPlanActivities.length} activities available for voting`}
-                  title="Decision-making and voting"
-                >
-                  <div className="workspace-two-column">
-                    <article className="panel-card">
-                      <h3>Collaboration health</h3>
-                      <div className="simple-list">
-                        <div className="simple-row">
-                          <strong>Members</strong>
-                          <span>{memberships.length}</span>
-                        </div>
-                        <div className="simple-row">
-                          <strong>Total votes</strong>
-                          <span>{collaborationMetrics.voteTotal}</span>
-                        </div>
-                        {collaborationMetrics.contributorRows.map((row) => (
-                          <div className="simple-row" key={row.userId}>
-                            <strong>{row.username}</strong>
-                            <span>{row.count} activities created</span>
-                          </div>
-                        ))}
-                        {collaborationMetrics.contributorRows.length === 0 && (
-                          <p>Add activities with multiple members to show collaboration metrics.</p>
-                        )}
-                      </div>
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Activity voting</h3>
-                      <div className="voting-grid">
-                        {currentPlanActivities.map((activity) => {
-                          const activityVotes = votesByActivity[activity.id] || [];
-                          const currentUserVote = activityVotes.find((vote) => vote.userId === currentUser.id);
-
-                          return (
-                            <div className="vote-card" key={activity.id}>
-                              <div>
-                                <strong>{activity.name}</strong>
-                                <p>{activity.locationName}</p>
-                                <small>{activityVotes.length} total votes</small>
-                              </div>
-                              <div className="inline-actions">
-                                {currentUserVote ? (
-                                  <button
-                                    className="ghost-button danger"
-                                    onClick={() => handleDeleteVote(currentUserVote.id, activity.id)}
-                                    type="button"
-                                  >
-                                    Remove my vote
-                                  </button>
-                                ) : (
-                                  <button
-                                    className="secondary-button"
-                                    onClick={() => handleCreateVote(activity.id)}
-                                    type="button"
-                                  >
-                                    Vote for activity
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {currentPlanActivities.length === 0 && <p>No activities available for voting yet.</p>}
-                      </div>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-
-                <WorkspaceSection
-                  defaultOpen={false}
-                  description="Create shareable entries and keep public access links in one tidy place."
-                  meta={`${sharedLinks.length} links`}
-                  title="Sharing"
-                >
-                  <div className="workspace-two-column">
-                    <article className="panel-card">
-                      <h3>Create a shared link</h3>
-                      <form className="form-stack" onSubmit={handleCreateSharedLink}>
-                        <label>
-                          Share URL
-                          <input
-                            required
-                            value={sharedLinkForm.url}
-                            onChange={(event) =>
-                              setSharedLinkForm({ ...sharedLinkForm, url: event.target.value })
-                            }
-                          />
-                        </label>
-                        <label>
-                          Link type
-                          <input
-                            required
-                            value={sharedLinkForm.type}
-                            onChange={(event) =>
-                              setSharedLinkForm({ ...sharedLinkForm, type: event.target.value })
-                            }
-                          />
-                        </label>
-                        <button className="secondary-button" type="submit">
-                          Generate shared entry
-                        </button>
-                      </form>
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Active links</h3>
-                      <div className="simple-list">
-                        {sharedLinks.map((link) => (
-                          <div className="simple-row" key={link.id}>
-                            <a href={link.url} rel="noreferrer" target="_blank">
-                              {link.url}
-                            </a>
-                            <button
-                              className="ghost-button danger"
-                              onClick={() => handleDeleteSharedLink(link.id)}
-                              type="button"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))}
-                        {sharedLinks.length === 0 && <p>No shared links created for this trip yet.</p>}
-                      </div>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-              </div>
-            )}
-
-            {activeTab === 'notifications' && (
-              <div className="workspace-stack">
-                <div className="workspace-metric-grid">
-                  <article className="panel-card">
-                    <h3>Total reminders</h3>
-                    <p className="metric-value">{notifications.length}</p>
-                    <p>Saved notifications for this trip and this user.</p>
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Upcoming alerts</h3>
-                    <p className="metric-value">{upcomingNotifications.length}</p>
-                    <p>Items currently closest to the current time.</p>
-                  </article>
-
-                  <article className="panel-card">
-                    <h3>Reminder types</h3>
-                    <p className="metric-value">
-                      {new Set(notifications.map((notification) => notification.type)).size}
-                    </p>
-                    <p>Distinct categories used in the feed.</p>
-                  </article>
-                </div>
-
-                <WorkspaceSection
-                  defaultOpen
-                  description="Create transport, reservation, or activity reminders without squeezing the feed."
-                  meta={`${notifications.length} notifications`}
-                  title="Reminder composer"
-                >
-                  <article className="panel-card">
-                    <form className="form-stack" onSubmit={handleCreateNotification}>
-                      <label>
-                        Message
-                        <input
-                          required
-                          value={notificationForm.message}
-                          onChange={(event) =>
-                            setNotificationForm({ ...notificationForm, message: event.target.value })
-                          }
-                        />
-                      </label>
-                      <label>
-                        Date and time
-                        <input
-                          required
-                          type="datetime-local"
-                          value={notificationForm.date}
-                          onChange={(event) =>
-                            setNotificationForm({ ...notificationForm, date: event.target.value })
-                          }
-                        />
-                      </label>
-                      <label>
-                        Type
-                        <input
-                          required
-                          value={notificationForm.type}
-                          onChange={(event) =>
-                            setNotificationForm({ ...notificationForm, type: event.target.value })
-                          }
-                        />
-                      </label>
-                      <button className="primary-button" type="submit">
-                        Save notification
-                      </button>
-                    </form>
-                  </article>
-                </WorkspaceSection>
-
-                <WorkspaceSection
-                  defaultOpen
-                  description="Review what is coming next and keep a clean history of the reminders already saved."
-                  meta={`${upcomingNotifications.length} upcoming`}
-                  title="Reminder timeline"
-                >
-                  <div className="workspace-two-column">
-                    <article className="panel-card">
-                      <h3>Upcoming reminders</h3>
-                      <div className="simple-list compact-list">
-                        {upcomingNotifications.map((notification) => (
-                          <div className="simple-row" key={`upcoming-${notification.id}`}>
-                            <strong>Upcoming</strong>
-                            <span>
-                              {notification.message} • {notification.date}
-                            </span>
-                          </div>
-                        ))}
-                        {upcomingNotifications.length === 0 && <p>No upcoming reminders right now.</p>}
-                      </div>
-                    </article>
-
-                    <article className="panel-card">
-                      <h3>Notification feed</h3>
-                      <div className="simple-list">
-                        {notifications.map((notification) => (
-                          <div className="simple-row" key={notification.id}>
-                            <div>
-                              <strong>{notification.message}</strong>
-                              <span>
-                                {notification.type} • {notification.date}
-                              </span>
-                            </div>
-                            <button
-                              className="ghost-button danger"
-                              onClick={() => handleDeleteNotification(notification.id)}
-                              type="button"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))}
-                        {notifications.length === 0 && (
-                          <p>No notifications yet for the selected plan and current user.</p>
-                        )}
-                      </div>
-                    </article>
-                  </div>
-                </WorkspaceSection>
-              </div>
-            )}
-          </>
-        ) : (
+        {currentMenu.requiresPlan && !selectedPlan && (
           <div className="state-panel">Please select a trip plan so we can show additional information.</div>
+        )}
+
+        {selectedPlan && activeTab === 'route-optimization' && (
+          <article className="panel-card">
+            <h3>Route suggestions by day</h3>
+            <div className="itinerary-columns">
+              {selectedPlanDays.map((day) => (
+                <section className="day-card" key={day.id}>
+                  <strong>{day.date}</strong>
+                  <div className="route-box">
+                    <strong>Optimized route</strong>
+                    <small>
+                      {routeMetricsByDay[day.id]?.distanceKm} km • {routeMetricsByDay[day.id]?.transferMinutes} min
+                    </small>
+                    <ol>
+                      {(optimizedRoutesByDay[day.id] || []).map((activity) => (
+                        <li key={activity.id}>
+                          {activity.name} — {activity.locationName}
+                        </li>
+                      ))}
+                    </ol>
+                    <p>{routeMetricsByDay[day.id]?.summary}</p>
+                  </div>
+                </section>
+              ))}
+            </div>
+          </article>
+        )}
+
+        {selectedPlan && activeTab === 'activity-scheduling' && (
+          <div className="workspace-stack">
+            <div className="workspace-two-column">
+              <article className="panel-card">
+                <h3>Add location</h3>
+                <form className="form-stack" onSubmit={handleCreateLocation}>
+                  <label>
+                    Name
+                    <input required value={locationForm.name} onChange={(event) => setLocationForm({ ...locationForm, name: event.target.value })} />
+                  </label>
+                  <label>
+                    Destination
+                    <DestinationPicker
+                      onChange={(destinationId) => setLocationForm({ ...locationForm, destinationId })}
+                      options={availableDestinations}
+                      value={locationForm.destinationId}
+                    />
+                  </label>
+                  <label>
+                    Address
+                    <input required value={locationForm.address} onChange={(event) => setLocationForm({ ...locationForm, address: event.target.value })} />
+                  </label>
+                  <div className="split-fields">
+                    <label>
+                      Latitude
+                      <input value={locationForm.latitude} onChange={(event) => setLocationForm({ ...locationForm, latitude: event.target.value })} />
+                    </label>
+                    <label>
+                      Longitude
+                      <input value={locationForm.longitude} onChange={(event) => setLocationForm({ ...locationForm, longitude: event.target.value })} />
+                    </label>
+                  </div>
+                  <label>
+                    Type
+                    <input required value={locationForm.type} onChange={(event) => setLocationForm({ ...locationForm, type: event.target.value })} />
+                  </label>
+                  <button className="secondary-button" type="submit">
+                    Save location
+                  </button>
+                </form>
+              </article>
+
+              <article className="panel-card">
+                <h3>Schedule activity</h3>
+                <form className="form-stack" onSubmit={handleCreateActivity}>
+                  <label>
+                    Activity name
+                    <input required value={activityForm.name} onChange={(event) => setActivityForm({ ...activityForm, name: event.target.value })} />
+                  </label>
+                  <label>
+                    Day
+                    <select required value={activityForm.dayId} onChange={(event) => setActivityForm({ ...activityForm, dayId: event.target.value })}>
+                      <option value="">Select day</option>
+                      {selectedPlanDays.map((day) => (
+                        <option key={day.id} value={day.id}>
+                          {day.date}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Location
+                    <select required value={activityForm.locationId} onChange={(event) => setActivityForm({ ...activityForm, locationId: event.target.value })}>
+                      <option value="">Select location</option>
+                      {locations
+                        .filter((location) => location.destinationId === selectedPlan.destinationId)
+                        .map((location) => (
+                          <option key={location.id} value={location.id}>
+                            {location.name}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    Description
+                    <textarea rows="2" value={activityForm.description} onChange={(event) => setActivityForm({ ...activityForm, description: event.target.value })} />
+                  </label>
+                  <div className="split-fields">
+                    <label>
+                      Timeslot
+                      <select value={activityForm.timeslot} onChange={(event) => setActivityForm({ ...activityForm, timeslot: event.target.value })}>
+                        <option value="MORNING">Morning</option>
+                        <option value="NOON">Noon</option>
+                        <option value="EVENING">Evening</option>
+                      </select>
+                    </label>
+                    <label>
+                      Duration in minutes
+                      <input min="15" required type="number" value={activityForm.duration} onChange={(event) => setActivityForm({ ...activityForm, duration: event.target.value })} />
+                    </label>
+                  </div>
+                  <div className="split-fields">
+                    <label>
+                      Start time
+                      <input required type="time" value={activityForm.startTime} onChange={(event) => setActivityForm({ ...activityForm, startTime: event.target.value })} />
+                    </label>
+                    <label>
+                      End time
+                      <input required type="time" value={activityForm.endTime} onChange={(event) => setActivityForm({ ...activityForm, endTime: event.target.value })} />
+                    </label>
+                  </div>
+                  <button className="primary-button" type="submit">
+                    Add activity
+                  </button>
+                  {activityConflictPreview && (
+                    <div className="inline-error">This slot overlaps with {activityConflictPreview.name}. Adjust the time before saving.</div>
+                  )}
+                </form>
+              </article>
+            </div>
+
+            <article className="panel-card">
+              <h3>Day-by-day schedule</h3>
+              <div className="itinerary-columns">
+                {selectedPlanDays.map((day) => (
+                  <section className="day-card" key={day.id}>
+                    <div className="day-card-header">
+                      <div>
+                        <strong>{day.date}</strong>
+                        <small>{(activitiesByDay.get(day.id) || []).length} scheduled items</small>
+                      </div>
+                      <span className="status-pill status-muted">{calculateWorkload(activitiesByDay.get(day.id) || []).level}</span>
+                    </div>
+                    <div className="simple-list">
+                      {(activitiesByDay.get(day.id) || []).map((activity) => (
+                        <div className="itinerary-item" key={activity.id}>
+                          <div>
+                            <strong>{activity.name}</strong>
+                            <p>{activity.locationName}</p>
+                            <small>
+                              {activity.timeslot} • {activity.startTime} → {activity.endTime}
+                            </small>
+                          </div>
+                          <div className="inline-actions">
+                            <button className="ghost-button" onClick={() => handleActivityStatusChange(activity, 'DONE')} type="button">
+                              Mark done
+                            </button>
+                            <button className="ghost-button danger" onClick={() => handleDeleteActivity(activity.id)} type="button">
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'attractions' && (
+          <div className="workspace-two-column">
+            <article className="panel-card">
+              <h3>Attraction recommendations</h3>
+              <div className="chip-grid">
+                {attractionRecommendations.map((location) => (
+                  <div className="insight-chip" key={location.id}>
+                    <strong>{location.name}</strong>
+                    <span>{location.type}</span>
+                    <small>{location.reason}</small>
+                  </div>
+                ))}
+                {attractionRecommendations.length === 0 && <p>No attraction suggestions yet. Add locations or preferences first.</p>}
+              </div>
+            </article>
+
+            <article className="panel-card">
+              <h3>Preference-driven suggestions</h3>
+              <form className="form-stack" onSubmit={handleSavePreference}>
+                <label>
+                  Preference type
+                  <select value={preferenceForm.preferenceType} onChange={(event) => setPreferenceForm({ ...preferenceForm, preferenceType: event.target.value })}>
+                    <option>Interest</option>
+                    <option>Food</option>
+                    <option>Travel style</option>
+                  </select>
+                </label>
+                <label>
+                  Preference value
+                  <input required value={preferenceForm.preferenceValue} onChange={(event) => setPreferenceForm({ ...preferenceForm, preferenceValue: event.target.value })} />
+                </label>
+                <button className="secondary-button" type="submit">
+                  Save preference
+                </button>
+              </form>
+              <div className="simple-list">
+                {(currentUser.preferences || []).map((preference) => (
+                  <div className="simple-row" key={preference.id}>
+                    <strong>{preference.preferenceType}</strong>
+                    <span>{preference.preferenceValue}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'weather-forecast' && (
+          <div className="workspace-two-column">
+            <article className="panel-card">
+              <h3>Weather outlook</h3>
+              {forecast ? (
+                <>
+                  <p className="metric-value">{forecast.temperature}</p>
+                  <p>{forecast.summary}</p>
+                  <small>
+                    {forecast.advice} • {forecast.source}
+                  </small>
+                </>
+              ) : (
+                <p>No forecast available yet.</p>
+              )}
+            </article>
+            <article className="panel-card">
+              <h3>Weather-based guidance</h3>
+              <div className="simple-list">
+                {weatherActivityRecommendations.map((item) => (
+                  <div className="simple-row" key={item}>
+                    <strong>Recommendation</strong>
+                    <span>{item}</span>
+                  </div>
+                ))}
+                {weatherActivityRecommendations.length === 0 && <p>Weather-aware guidance will appear after the forecast loads.</p>}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'budget-management' && (
+          <div className="workspace-two-column">
+            <article className="panel-card">
+              <h3>Budget management</h3>
+              <div className="finance-summary-card">
+                <strong>Estimated total</strong>
+                <span>€{budgetProjection.estimatedTotal}</span>
+                <small>
+                  {budgetProjection.perDay} EUR per day • booked reservations €{budgetProjection.bookedReservationTotal}
+                </small>
+              </div>
+              <form className="form-stack" onSubmit={handleCreateBudget}>
+                <label>
+                  Total amount
+                  <input min="1" required type="number" value={budgetForm.totalAmount} onChange={(event) => setBudgetForm({ ...budgetForm, totalAmount: event.target.value })} />
+                </label>
+                <label>
+                  Currency
+                  <input value={budgetForm.currency} onChange={(event) => setBudgetForm({ ...budgetForm, currency: event.target.value })} />
+                </label>
+                <button className="primary-button" type="submit">
+                  Save budget
+                </button>
+              </form>
+              <div className="simple-list">
+                {budgets.map((budget) => (
+                  <div className="simple-row" key={budget.id}>
+                    <div>
+                      <strong>{budget.totalAmount}</strong>
+                      <span>{budget.currency}</span>
+                    </div>
+                    <button className="ghost-button danger" onClick={() => handleDeleteBudget(budget.id)} type="button">
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="panel-card">
+              <h3>Expense tracker</h3>
+              <div className="simple-list compact-list">
+                <div className="simple-row">
+                  <strong>Dining projection</strong>
+                  <span>€{budgetProjection.diningProjection}</span>
+                </div>
+                <div className="simple-row">
+                  <strong>Mobility projection</strong>
+                  <span>€{budgetProjection.mobilityProjection}</span>
+                </div>
+                <div className="simple-row">
+                  <strong>Activity projection</strong>
+                  <span>€{budgetProjection.activityProjection}</span>
+                </div>
+                <div className="simple-row">
+                  <strong>Contingency reserve</strong>
+                  <span>€{budgetProjection.contingency}</span>
+                </div>
+              </div>
+              <form className="form-stack" onSubmit={handleCreateExpense}>
+                <label>
+                  Amount
+                  <input min="1" required type="number" value={expenseForm.amount} onChange={(event) => setExpenseForm({ ...expenseForm, amount: event.target.value })} />
+                </label>
+                <label>
+                  Category
+                  <input required value={expenseForm.category} onChange={(event) => setExpenseForm({ ...expenseForm, category: event.target.value })} />
+                </label>
+                <label>
+                  Date and time
+                  <input required type="datetime-local" value={expenseForm.date} onChange={(event) => setExpenseForm({ ...expenseForm, date: event.target.value })} />
+                </label>
+                <button className="secondary-button" type="submit">
+                  Add expense
+                </button>
+              </form>
+              <div className="simple-list">
+                {expenses.map((expense) => (
+                  <div className="simple-row" key={expense.id}>
+                    <div>
+                      <strong>{expense.amount}</strong>
+                      <span>{expense.category}</span>
+                    </div>
+                    <button className="ghost-button danger" onClick={() => handleDeleteExpense(expense.id)} type="button">
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'collaborative-planning' && (
+          <div className="workspace-two-column">
+            <article className="panel-card">
+              <h3>Plan members</h3>
+              <form className="form-stack" onSubmit={handleCreateMembership}>
+                <label>
+                  User
+                  <select required value={membershipForm.userId} onChange={(event) => setMembershipForm({ ...membershipForm, userId: event.target.value })}>
+                    <option value="">Select user</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.username}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Role
+                  <select value={membershipForm.role} onChange={(event) => setMembershipForm({ ...membershipForm, role: event.target.value })}>
+                    <option value="EDITOR">Editor</option>
+                    <option value="VIEWER">Viewer</option>
+                    <option value="OWNER">Owner</option>
+                  </select>
+                </label>
+                <button className="primary-button" type="submit">
+                  Add member
+                </button>
+              </form>
+              <div className="simple-list">
+                {memberships.map((membership) => (
+                  <div className="simple-row" key={membership.id}>
+                    <strong>{users.find((user) => user.id === membership.userId)?.username || `User ${membership.userId}`}</strong>
+                    <span>{membership.role}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="panel-card">
+              <h3>Collaboration health</h3>
+              <div className="simple-list">
+                <div className="simple-row">
+                  <strong>Members</strong>
+                  <span>{memberships.length}</span>
+                </div>
+                <div className="simple-row">
+                  <strong>Total votes</strong>
+                  <span>{collaborationMetrics.voteTotal}</span>
+                </div>
+                {collaborationMetrics.contributorRows.map((row) => (
+                  <div className="simple-row" key={row.userId}>
+                    <strong>{row.username}</strong>
+                    <span>{row.count} activities created</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'activity-voting' && (
+          <article className="panel-card">
+            <h3>Activity voting</h3>
+            <div className="voting-grid">
+              {currentPlanActivities.map((activity) => {
+                const activityVotes = votesByActivity[activity.id] || [];
+                const currentUserVote = activityVotes.find((vote) => vote.userId === currentUser.id);
+
+                return (
+                  <div className="vote-card" key={activity.id}>
+                    <div>
+                      <strong>{activity.name}</strong>
+                      <p>{activity.locationName}</p>
+                      <small>{activityVotes.length} total votes</small>
+                    </div>
+                    <div className="inline-actions">
+                      {currentUserVote ? (
+                        <button className="ghost-button danger" onClick={() => handleDeleteVote(currentUserVote.id, activity.id)} type="button">
+                          Remove my vote
+                        </button>
+                      ) : (
+                        <button className="secondary-button" onClick={() => handleCreateVote(activity.id)} type="button">
+                          Vote for activity
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </article>
+        )}
+
+        {selectedPlan && activeTab === 'reservations' && (
+          <div className="workspace-stack">
+            <div className="workspace-two-column">
+              <article className="panel-card">
+                <h3>Link a reservation</h3>
+                <form className="form-stack" onSubmit={handleCreateReservation}>
+                  <label>
+                    Reservation type
+                    <input required value={reservationForm.type} onChange={(event) => setReservationForm({ ...reservationForm, type: event.target.value })} />
+                  </label>
+                  <label>
+                    Details
+                    <textarea rows="2" value={reservationForm.details} onChange={(event) => setReservationForm({ ...reservationForm, details: event.target.value })} />
+                  </label>
+                  <div className="split-fields">
+                    <label>
+                      Start date
+                      <input required type="datetime-local" value={reservationForm.startDate} onChange={(event) => setReservationForm({ ...reservationForm, startDate: event.target.value })} />
+                    </label>
+                    <label>
+                      End date
+                      <input required type="datetime-local" value={reservationForm.endDate} onChange={(event) => setReservationForm({ ...reservationForm, endDate: event.target.value })} />
+                    </label>
+                  </div>
+                  <label>
+                    Price
+                    <input type="number" value={reservationForm.price} onChange={(event) => setReservationForm({ ...reservationForm, price: event.target.value })} />
+                  </label>
+                  <button className="primary-button" type="submit">
+                    Link reservation
+                  </button>
+                </form>
+              </article>
+
+              <article className="panel-card">
+                <h3>Async reservation saga</h3>
+                <form className="form-stack" onSubmit={handleStartSagaReservation}>
+                  <label>
+                    Saga item name
+                    <input required value={sagaRequestForm.itemName} onChange={(event) => setSagaRequestForm({ ...sagaRequestForm, itemName: event.target.value })} />
+                  </label>
+                  <label>
+                    Reservation type
+                    <input required value={sagaRequestForm.reservationType} onChange={(event) => setSagaRequestForm({ ...sagaRequestForm, reservationType: event.target.value })} />
+                  </label>
+                  <div className="split-fields">
+                    <label>
+                      Start date
+                      <input required type="date" value={sagaRequestForm.startDate} onChange={(event) => setSagaRequestForm({ ...sagaRequestForm, startDate: event.target.value })} />
+                    </label>
+                    <label>
+                      End date
+                      <input required type="date" value={sagaRequestForm.endDate} onChange={(event) => setSagaRequestForm({ ...sagaRequestForm, endDate: event.target.value })} />
+                    </label>
+                  </div>
+                  <label>
+                    Amount
+                    <input required type="number" value={sagaRequestForm.amount} onChange={(event) => setSagaRequestForm({ ...sagaRequestForm, amount: event.target.value })} />
+                  </label>
+                  <div className="toggle-row">
+                    <label>
+                      <input checked={sagaRequestForm.simulateFinanceFailure} type="checkbox" onChange={(event) => setSagaRequestForm({ ...sagaRequestForm, simulateFinanceFailure: event.target.checked })} />
+                      Simulate finance failure
+                    </label>
+                    <label>
+                      <input checked={sagaRequestForm.simulatePlanningFinalizationFailure} type="checkbox" onChange={(event) => setSagaRequestForm({ ...sagaRequestForm, simulatePlanningFinalizationFailure: event.target.checked })} />
+                      Simulate planning finalization failure
+                    </label>
+                  </div>
+                  <button className="secondary-button" type="submit">
+                    Start saga reservation
+                  </button>
+                </form>
+              </article>
+            </div>
+
+            <div className="triple-grid">
+              <div className="panel-slab">
+                <h4>Linked reservations</h4>
+                {reservations.map((reservation) => (
+                  <div className="simple-row" key={reservation.id}>
+                    <div>
+                      <strong>{reservation.type}</strong>
+                      <span>{reservation.status}</span>
+                    </div>
+                    <button className="ghost-button danger" onClick={() => handleDeleteReservation(reservation.id)} type="button">
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="panel-slab">
+                <h4>Premium reservations</h4>
+                {premiumReservations.map((reservation) => (
+                  <div className="simple-row" key={reservation.id}>
+                    <strong>{reservation.type}</strong>
+                    <span>{reservation.price}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="panel-slab">
+                <h4>Async statuses</h4>
+                {planReservations.map((reservation) => (
+                  <div className="simple-row" key={reservation.id}>
+                    <div>
+                      <strong>{reservation.itemName}</strong>
+                      <span>{reservation.status}</span>
+                    </div>
+                    <small>{reservation.failureReason || 'No failure reason'}</small>
+                  </div>
+                ))}
+                {sagaReservations.map((reservation) => (
+                  <div className="simple-row" key={reservation.id}>
+                    <div>
+                      <strong>Finance #{reservation.id}</strong>
+                      <span>{reservation.status}</span>
+                    </div>
+                    <small>{reservation.failureReason || 'Finance side finalized cleanly'}</small>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'offline-access' && (
+          <article className="panel-card">
+            <h3>Offline access</h3>
+            <p>Save the current plan snapshot locally for offline access during the trip.</p>
+            <div className="inline-actions">
+              <button className="secondary-button" onClick={handleSaveOffline} type="button">
+                Save offline snapshot
+              </button>
+              <button className="primary-button" onClick={handleExportPdf} type="button">
+                Download or print PDF
+              </button>
+              <button className="ghost-button" onClick={handleDownloadOfflinePlan} type="button">
+                Download JSON
+              </button>
+            </div>
+            {offlineSnapshot && <small>Cached itinerary available with {offlineSnapshot.days.length} generated day entries.</small>}
+          </article>
+        )}
+
+        {selectedPlan && activeTab === 'notifications' && (
+          <div className="workspace-two-column">
+            <article className="panel-card">
+              <h3>Create reminder</h3>
+              <form className="form-stack" onSubmit={handleCreateNotification}>
+                <label>
+                  Message
+                  <input required value={notificationForm.message} onChange={(event) => setNotificationForm({ ...notificationForm, message: event.target.value })} />
+                </label>
+                <label>
+                  Date and time
+                  <input required type="datetime-local" value={notificationForm.date} onChange={(event) => setNotificationForm({ ...notificationForm, date: event.target.value })} />
+                </label>
+                <label>
+                  Type
+                  <input required value={notificationForm.type} onChange={(event) => setNotificationForm({ ...notificationForm, type: event.target.value })} />
+                </label>
+                <button className="primary-button" type="submit">
+                  Save notification
+                </button>
+              </form>
+            </article>
+
+            <article className="panel-card">
+              <h3>Notification feed</h3>
+              <div className="simple-list compact-list">
+                {upcomingNotifications.map((notification) => (
+                  <div className="simple-row" key={`upcoming-${notification.id}`}>
+                    <strong>Upcoming</strong>
+                    <span>
+                      {notification.message} • {notification.date}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="simple-list">
+                {notifications.map((notification) => (
+                  <div className="simple-row" key={notification.id}>
+                    <div>
+                      <strong>{notification.message}</strong>
+                      <span>
+                        {notification.type} • {notification.date}
+                      </span>
+                    </div>
+                    <button className="ghost-button danger" onClick={() => handleDeleteNotification(notification.id)} type="button">
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'workload-analysis' && (
+          <div className="workspace-stack">
+            <div className="workspace-metric-grid">
+              <article className="panel-card">
+                <h3>Schedule load analysis</h3>
+                <p className="metric-value">{currentWorkload.level}</p>
+                <p>Score: {Math.round(currentWorkload.score)}</p>
+                <small>{currentWorkload.message}</small>
+              </article>
+              <article className="panel-card">
+                <h3>Trip days</h3>
+                <p className="metric-value">{selectedPlanDays.length}</p>
+                <p>Auto-generated and editable</p>
+              </article>
+              <article className="panel-card">
+                <h3>Scheduled activities</h3>
+                <p className="metric-value">{currentPlanActivities.length}</p>
+                <p>Current items across the itinerary</p>
+              </article>
+            </div>
+            <article className="panel-card">
+              <h3>Workload by day</h3>
+              <div className="itinerary-columns">
+                {selectedPlanDays.map((day) => {
+                  const dayWorkload = calculateWorkload(activitiesByDay.get(day.id) || []);
+                  return (
+                    <div className="day-card" key={day.id}>
+                      <strong>{day.date}</strong>
+                      <span className={`status-pill status-muted`}>{dayWorkload.level}</span>
+                      <p>{dayWorkload.message}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'local-recommendations' && (
+          <article className="panel-card">
+            <h3>Restaurants and nearby events</h3>
+            <div className="chip-grid">
+              {nearbySuggestions.map((location) => (
+                <div className="insight-chip" key={location.id}>
+                  <strong>{location.name}</strong>
+                  <span>{location.type}</span>
+                  <small>{location.bestMoment}</small>
+                </div>
+              ))}
+              {nearbySuggestions.length === 0 && <p>Add restaurants, cafes, or event venues to unlock local suggestions.</p>}
+            </div>
+          </article>
+        )}
+
+        {selectedPlan && activeTab === 'trip-sharing' && (
+          <div className="workspace-two-column">
+            <article className="panel-card">
+              <h3>Create a shared link</h3>
+              <form className="form-stack" onSubmit={handleCreateSharedLink}>
+                <label>
+                  Share URL
+                  <input required value={sharedLinkForm.url} onChange={(event) => setSharedLinkForm({ ...sharedLinkForm, url: event.target.value })} />
+                </label>
+                <label>
+                  Link type
+                  <input required value={sharedLinkForm.type} onChange={(event) => setSharedLinkForm({ ...sharedLinkForm, type: event.target.value })} />
+                </label>
+                <button className="secondary-button" type="submit">
+                  Generate shared entry
+                </button>
+              </form>
+            </article>
+            <article className="panel-card">
+              <h3>Active links</h3>
+              <div className="simple-list">
+                {sharedLinks.map((link) => (
+                  <div className="simple-row" key={link.id}>
+                    <a href={link.url} rel="noreferrer" target="_blank">
+                      {link.url}
+                    </a>
+                    <button className="ghost-button danger" onClick={() => handleDeleteSharedLink(link.id)} type="button">
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        )}
+
+        {selectedPlan && activeTab === 'wait-time-analysis' && (
+          <article className="panel-card">
+            <h3>Wait-time analysis</h3>
+            <div className="simple-list">
+              {waitTimeInsights.map((insight) => (
+                <div className="simple-row" key={insight.id}>
+                  <div>
+                    <strong>{insight.name}</strong>
+                    <span>{insight.locationName}</span>
+                  </div>
+                  <small>
+                    {insight.waitMinutes} min • {insight.bestWindow}
+                  </small>
+                </div>
+              ))}
+              {waitTimeInsights.length === 0 && <p>Add activities to unlock wait-time analysis and visit-window guidance.</p>}
+            </div>
+          </article>
         )}
       </section>
     </div>

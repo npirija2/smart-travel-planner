@@ -407,6 +407,268 @@ textarea:focus {
   gap: 1.4rem;
 }
 
+.workspace-shell {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.workspace-rail,
+.workspace-stage {
+  min-width: 0;
+}
+
+.workspace-rail {
+  position: sticky;
+  top: 5.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: calc(100vh - 7rem);
+  padding: 1.25rem;
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(25, 33, 42, 0.08);
+  border-radius: 1.75rem;
+  box-shadow: 0 18px 48px rgba(45, 78, 115, 0.1);
+}
+
+.workspace-rail-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(25, 33, 42, 0.08);
+}
+
+.workspace-rail-head strong {
+  font-size: 1.1rem;
+}
+
+.workspace-rail-head small,
+.workspace-rail-label,
+.workspace-rail-empty {
+  color: #607185;
+}
+
+.workspace-rail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.workspace-rail-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.workspace-rail-trip-list,
+.workspace-side-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.rail-trip-card,
+.workspace-side-link {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: 1.2rem;
+  background: rgba(248, 251, 255, 0.9);
+  border: 1px solid rgba(25, 33, 42, 0.08);
+  text-align: left;
+}
+
+.rail-trip-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.rail-trip-card span,
+.rail-trip-card small {
+  color: #607185;
+}
+
+.rail-trip-card.is-current {
+  background: linear-gradient(135deg, rgba(33, 123, 255, 0.12), rgba(25, 184, 255, 0.08));
+  border-color: rgba(33, 123, 255, 0.25);
+}
+
+.workspace-side-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.workspace-side-link strong {
+  color: #1c2430;
+}
+
+.workspace-side-link small {
+  color: #607185;
+}
+
+.workspace-side-link.is-active {
+  background: linear-gradient(135deg, #3778ff 0%, #2a67df 100%);
+  border-color: rgba(55, 120, 255, 0.3);
+  box-shadow: 0 16px 32px rgba(42, 103, 223, 0.2);
+}
+
+.workspace-side-link.is-active strong,
+.workspace-side-link.is-active small {
+  color: #fff;
+}
+
+.workspace-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.workspace-stage-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.35rem;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(25, 33, 42, 0.08);
+  border-radius: 1.75rem;
+  box-shadow: 0 18px 48px rgba(45, 78, 115, 0.08);
+}
+
+.workspace-stage-bar h1 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.8rem, 2vw, 2.4rem);
+}
+
+.workspace-stage-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.workspace-current-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 3rem;
+  padding: 0.8rem 1rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(25, 33, 42, 0.1);
+  font-weight: 700;
+}
+
+.workspace-trips-menu {
+  position: relative;
+}
+
+.workspace-trips-panel {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  right: 0;
+  z-index: 20;
+  width: min(30rem, 78vw);
+  padding: 1rem;
+  border-radius: 1.35rem;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(25, 33, 42, 0.08);
+  box-shadow: 0 22px 48px rgba(30, 62, 97, 0.16);
+}
+
+.workspace-trips-panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.85rem;
+}
+
+.workspace-trips-panel-head small {
+  color: #607185;
+}
+
+.workspace-trips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.workspace-trip-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: 1.1rem;
+  background: rgba(248, 251, 255, 0.92);
+  border: 1px solid rgba(25, 33, 42, 0.08);
+  text-align: left;
+}
+
+.workspace-trip-option > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.workspace-trip-option span,
+.workspace-trip-option small {
+  color: #607185;
+}
+
+.workspace-trip-option.is-active {
+  border-color: rgba(55, 120, 255, 0.35);
+  box-shadow: 0 10px 22px rgba(42, 103, 223, 0.12);
+}
+
+.workspace-hero-card h2 {
+  margin: 0 0 0.65rem;
+  font-size: 2.2rem;
+}
+
+.dashboard-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.dashboard-plan-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  padding: 1.1rem 1.15rem;
+  border-radius: 1.2rem;
+  background: rgba(248, 251, 255, 0.92);
+  border: 1px solid rgba(25, 33, 42, 0.08);
+  text-align: left;
+}
+
+.dashboard-plan-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dashboard-plan-row span,
+.dashboard-plan-row small {
+  color: #607185;
+}
+
+.dashboard-plan-row.is-active {
+  border-color: rgba(55, 120, 255, 0.35);
+  box-shadow: 0 10px 22px rgba(42, 103, 223, 0.12);
+}
+
 .workspace-sidebar {
   display: flex;
   flex-direction: column;
@@ -618,6 +880,20 @@ textarea:focus {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.workspace-create-layout {
+  display: flex;
+  justify-content: center;
+}
+
+.workspace-create-card {
+  width: min(100%, 52rem);
+}
+
+.section-intro {
+  margin: 0 0 1rem;
+  color: #607185;
 }
 
 .workspace-metric-grid,
@@ -901,6 +1177,7 @@ textarea:focus {
 }
 
 @media (max-width: 1200px) {
+  .workspace-shell,
   .workspace-layout,
   .hero-panel,
   .auth-page,
@@ -921,6 +1198,11 @@ textarea:focus {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .workspace-rail {
+    position: static;
+    max-height: none;
+  }
 }
 
 @media (max-width: 880px) {
@@ -939,8 +1221,10 @@ textarea:focus {
   }
 
   .headline-card,
+  .workspace-stage-bar,
   .workspace-section-header,
   .vote-card,
+  .dashboard-plan-row,
   .simple-row,
   .itinerary-item,
   .day-card-header {
@@ -954,5 +1238,9 @@ textarea:focus {
 
   .workspace-nav-list {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-stage-bar-actions {
+    justify-content: flex-start;
   }
 }

@@ -6,6 +6,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import io.jsonwebtoken.JwtException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -43,14 +45,23 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
-    @ExceptionHandler(Exception.class)
-public ResponseEntity<ApiErrorResponse> handleGeneral(Exception ex) {
-    ex.printStackTrace();
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ApiErrorResponse> handleJwtException(JwtException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiErrorResponse.builder()
+                        .error("unauthorized")
+                        .message("Your session expired. Please sign in again.")
+                        .build());
+    }
 
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiErrorResponse.builder()
-                    .error("internal_error")
-                    .message(ex.getMessage())
-                    .build());
-}
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleGeneral(Exception ex) {
+        ex.printStackTrace();
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiErrorResponse.builder()
+                        .error("internal_error")
+                        .message("Unexpected error occurred")
+                        .build());
+    }
 }

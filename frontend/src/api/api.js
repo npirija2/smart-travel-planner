@@ -20,6 +20,10 @@ export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
+function notifySessionExpired() {
+  window.dispatchEvent(new CustomEvent('auth:expired'));
+}
+
 api.interceptors.request.use((config) => {
   const session = getStoredSession();
 
@@ -55,8 +59,20 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         clearSession();
+        notifySessionExpired();
+        if (refreshError.response?.data && typeof refreshError.response.data === 'object') {
+          refreshError.response.data.message = 'Your session expired. Please sign in again.';
+        }
         return Promise.reject(refreshError);
       }
+    }
+
+    if (error.response?.status === 401) {
+      if (error.response?.data && typeof error.response.data === 'object') {
+        error.response.data.message = 'Your session expired. Please sign in again.';
+      }
+      clearSession();
+      notifySessionExpired();
     }
 
     return Promise.reject(error);

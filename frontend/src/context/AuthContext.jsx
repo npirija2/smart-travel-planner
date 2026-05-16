@@ -45,6 +45,19 @@ export function AuthProvider({ children }) {
     bootstrap();
   }, []);
 
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      clearSession();
+      setCurrentUser(null);
+    };
+
+    window.addEventListener('auth:expired', handleSessionExpired);
+
+    return () => {
+      window.removeEventListener('auth:expired', handleSessionExpired);
+    };
+  }, []);
+
   const value = useMemo(
     () => ({
       currentUser,
