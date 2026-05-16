@@ -112,9 +112,13 @@ public class NotificationService {
         String token = authHeader.substring(7);
         try {
             jwtUtils.getClaims(token);
-        } catch (Exception e) {
-            throw new UnauthorizedException("Invalid token");
-        }
+        }catch (Exception e) {
+
+    e.printStackTrace();
+
+    throw new UnauthorizedException(
+            "Invalid or expired token");
+}
     }
 
     private Notification mapToEntity(NotificationRequestDTO requestDTO) {
