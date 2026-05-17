@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 public class ExpenseResponseDTO {
     private UUID id;
     private Double amount;
-    private UUID planId;
+    private Long planId;
     private String category;
     private LocalDateTime date;
 }

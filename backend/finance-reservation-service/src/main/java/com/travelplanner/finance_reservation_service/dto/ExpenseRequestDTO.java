@@ -3,8 +3,6 @@ package com.travelplanner.finance_reservation_service.dto;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
-import java.util.UUID;
-
 import java.time.LocalDateTime;
 
 @Data
@@ -15,7 +13,7 @@ public class ExpenseRequestDTO {
     private Double amount;
 
     @NotNull(message = "Plan ID is required")
-    private UUID planId;
+    private Long planId;
 
     private String category;
 

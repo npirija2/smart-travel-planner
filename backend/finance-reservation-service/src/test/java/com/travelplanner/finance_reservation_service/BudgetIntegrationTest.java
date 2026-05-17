@@ -56,11 +56,11 @@ class BudgetIntegrationTest {
 
     @Test
     void shouldCreateFetchAndFilterBudgetThroughFullStack() throws Exception {
-        UUID planId = UUID.randomUUID();
+        Long planId = 404L;
         String request = """
                 {
                   "totalAmount": 2500.0,
-                  "planId": "%s",
+                  "planId": %s,
                   "currency": "EUR"
                 }
                 """.formatted(planId);
@@ -71,7 +71,7 @@ class BudgetIntegrationTest {
                         .content(request))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.planId").value(planId.toString()))
+                .andExpect(jsonPath("$.planId").value(planId))
                 .andExpect(jsonPath("$.totalAmount").value(2500.0))
                 .andReturn();
 
@@ -92,16 +92,16 @@ class BudgetIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(budgetId))
-                .andExpect(jsonPath("$[0].planId").value(planId.toString()));
+                .andExpect(jsonPath("$[0].planId").value(planId));
     }
 
     @Test
     void shouldReturnValidationErrorAsJsonForInvalidBudgetRequest() throws Exception {
-        UUID planId = UUID.randomUUID();
+        Long planId = 405L;
         String invalidRequest = """
                 {
                   "totalAmount": -5,
-                  "planId": "%s",
+                  "planId": %s,
                   "currency": "EUR"
                 }
                 """.formatted(planId);

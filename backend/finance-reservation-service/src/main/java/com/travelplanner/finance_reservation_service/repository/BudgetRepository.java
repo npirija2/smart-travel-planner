@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface BudgetRepository extends JpaRepository<Budget, UUID> {
-    List<Budget> findByPlanId(UUID planId);
+    List<Budget> findByPlanId(Long planId);
 }

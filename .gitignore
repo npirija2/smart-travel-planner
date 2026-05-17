@@ -32,3 +32,6 @@ replay_pid*
 # Maven / Gradle build output
 **/target/
 **/build/
+
+# Local backend runtime artifacts
+backend/.run/

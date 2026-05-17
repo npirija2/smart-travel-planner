@@ -14,7 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID; 
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/budgets")
@@ -46,7 +46,7 @@ public class BudgetController {
     @GetMapping("/plan/{planId}")
     @Operation(summary = "Get budgets by plan ID")
     public ResponseEntity<List<BudgetResponseDTO>> getBudgetsByPlanId(
-            @PathVariable UUID planId,
+            @PathVariable Long planId,
             @RequestHeader("Authorization") String authHeader) { // DODANO
         return ResponseEntity.ok(budgetService.getBudgetsByPlanId(planId, authHeader));
     }

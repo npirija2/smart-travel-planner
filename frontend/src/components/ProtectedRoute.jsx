@@ -1,11 +1,11 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 const ProtectedRoute = ({ children }) => {
     const token = localStorage.getItem('token');
+    const location = useLocation();
 
     if (!token) {
-        alert("You must be logged in to see this page!");
-        return <Navigate to="/login" replace />;
+        return <Navigate to="/login" replace state={{ from: location.pathname }} />;
     }
 
     return children;
