@@ -14,3 +14,9 @@ export const updateBudget = async (budgetId, budgetData) => {
   const response = await api.put(`/budgets/${budgetId}`, budgetData);
   return response.data;
 };
+
+
+export const estimateBudget = async (planId) => {
+  const response = await api.get(`/budgets/estimate/${planId}`);
+  return response.data;
+}

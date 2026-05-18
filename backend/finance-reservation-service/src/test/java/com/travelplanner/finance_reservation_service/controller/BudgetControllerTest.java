@@ -77,18 +77,21 @@ class BudgetControllerTest {
     void shouldGetBudgetById() throws Exception {
         when(budgetService.getBudgetById(budgetId, AUTH_HEADER)).thenReturn(responseDTO);
 
-        mockMvc.perform(get("/api/budgets/" + budgetId).header("Authorization", AUTH_HEADER))
+        mockMvc.perform(get("/api/budgets/" + budgetId)
+                        .header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(budgetId.toString()));
     }
 
     @Test
-    void shouldReturn404WhenBudgetNotFound() throws Exception {
-        UUID randomId = UUID.randomUUID();
-        when(budgetService.getBudgetById(randomId, AUTH_HEADER))
+    void shouldReturn404WhenBudgetByIdNotFound() throws Exception {
+        UUID missingId = UUID.randomUUID();
+
+        when(budgetService.getBudgetById(missingId, AUTH_HEADER))
                 .thenThrow(new ResourceNotFoundException("Budget not found"));
 
-        mockMvc.perform(get("/api/budgets/" + randomId).header("Authorization", AUTH_HEADER))
+        mockMvc.perform(get("/api/budgets/" + missingId)
+                        .header("Authorization", AUTH_HEADER))
                 .andExpect(status().isNotFound());
     }
 

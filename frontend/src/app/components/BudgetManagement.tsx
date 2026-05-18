@@ -1,10 +1,42 @@
-import { DollarSign, PieChart, Plus, TrendingUp, AlertCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { getApiErrorMessage } from "../../api/errorUtils";
-import { createBudget, getBudgetsByPlan } from "../../api/budgetService";
+import { AlertCircle, DollarSign, PieChart, Plus, TrendingUp } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { createBudget, estimateBudget, getBudgetsByPlan } from "../../api/budgetService";
 import { createExpense, getExpensesByPlan } from "../../api/expenseService";
+import { getApiErrorMessage } from "../../api/errorUtils";
 import { usePlanContext } from "../context/PlanContext";
-import { ModuleEmpty, ModuleError, ModuleLoading } from "./ModuleState";
+import { ModuleEmpty, ModuleLoading } from "./ModuleState";
+
+type Budget = {
+  id?: string;
+  totalAmount: number;
+  currency?: string;
+  planId?: number;
+};
+
+type Expense = {
+  id?: string;
+  amount: number;
+  category?: string;
+  date: string;
+  planId?: number;
+};
+
+type CategorySummary = {
+  name: string;
+  spent: number;
+};
+
+type BudgetEstimateResponse = {
+  planId: number;
+  destination: string;
+  numberOfDays: number;
+  accommodationCost: number;
+  foodCost: number;
+  activitiesCost: number;
+  transportCost: number;
+  totalEstimatedCost: number;
+  currency: string;
+};
 
 const MAX_AMOUNT = 1000000;
 
@@ -23,30 +55,52 @@ function formatAmount(value) {
 
 export function BudgetManagement() {
   const { activePlan } = usePlanContext();
-  const [budgets, setBudgets] = useState([]);
-  const [expenses, setExpenses] = useState([]);
+
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [budgetForm, setBudgetForm] = useState({ totalAmount: "", currency: "EUR" });
-  const [expenseForm, setExpenseForm] = useState({ amount: "", category: "", date: "" });
+
+  const [budgetForm, setBudgetForm] = useState({
+    totalAmount: "",
+    currency: "EUR",
+  });
+
+  const [expenseForm, setExpenseForm] = useState({
+    amount: "",
+    category: "",
+    date: "",
+  });
+
+  const [estimatedBudget, setEstimatedBudget] = useState<BudgetEstimateResponse | null>(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [estimateError, setEstimateError] = useState("");
 
   const loadBudgetData = async () => {
     if (!activePlan) {
       setBudgets([]);
       setExpenses([]);
+      setEstimatedBudget(null);
+      setError("");
       return;
     }
+
+    setEstimatedBudget(null);
+    setEstimateError("");
 
     try {
       setLoading(true);
       setError("");
+
       const [nextBudgets, nextExpenses] = await Promise.all([
         getBudgetsByPlan(activePlan.id),
         getExpensesByPlan(activePlan.id),
       ]);
+
       setBudgets(nextBudgets);
       setExpenses(nextExpenses);
     } catch (fetchError) {
+      console.error("Budget data loading error:", fetchError);
       setError(getApiErrorMessage(fetchError, "Unable to load budget information."));
     } finally {
       setLoading(false);
@@ -68,44 +122,50 @@ export function BudgetManagement() {
     };
   }, [budgets, expenses]);
 
-  const categories = useMemo(() => {
-    return Object.values(
-      expenses.reduce((accumulator, expense) => {
-        const category = expense.category || "Uncategorized";
-        accumulator[category] = accumulator[category] || { name: category, spent: 0 };
-        accumulator[category].spent += expense.amount || 0;
-        return accumulator;
-      }, {}),
-    );
+  const categories = useMemo<CategorySummary[]>(() => {
+    const grouped = expenses.reduce<Record<string, CategorySummary>>((accumulator, expense) => {
+      const category = expense.category || "Uncategorized";
+
+      accumulator[category] = accumulator[category] || {
+        name: category,
+        spent: 0,
+      };
+
+      accumulator[category].spent += expense.amount || 0;
+
+      return accumulator;
+    }, {});
+
+    return Object.values(grouped);
   }, [expenses]);
 
-  const validateAmount = (value, label) => {
+  const validateAmount = (value: string, label: string) => {
     const amount = Number(value);
 
     if (!value || Number.isNaN(amount)) {
-      alert(`${label} amount is required.`);
+      setError(`${label} amount is required.`);
       return null;
     }
 
     if (!Number.isFinite(amount)) {
-      alert(`${label} amount is not valid.`);
+      setError(`${label} amount is not valid.`);
       return null;
     }
 
     if (amount <= 0) {
-      alert(`${label} amount must be greater than 0.`);
+      setError(`${label} amount must be greater than 0.`);
       return null;
     }
 
     if (amount > MAX_AMOUNT) {
-      alert(`${label} amount cannot be greater than ${formatAmount(MAX_AMOUNT)}.`);
+      setError(`${label} amount cannot be greater than ${formatAmount(MAX_AMOUNT)}.`);
       return null;
     }
 
     return amount;
   };
 
-  const handleCreateBudget = async (event) => {
+  const handleCreateBudget = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const totalAmount = validateAmount(budgetForm.totalAmount, "Budget");
@@ -115,6 +175,8 @@ export function BudgetManagement() {
     }
 
     try {
+      setError("");
+
       await createBudget({
         totalAmount,
         planId: activePlan.id,
@@ -128,7 +190,7 @@ export function BudgetManagement() {
     }
   };
 
-  const handleCreateExpense = async (event) => {
+  const handleCreateExpense = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const amount = validateAmount(expenseForm.amount, "Expense");
@@ -138,6 +200,8 @@ export function BudgetManagement() {
     }
 
     try {
+      setError("");
+
       await createExpense({
         amount,
         planId: activePlan.id,
@@ -152,6 +216,22 @@ export function BudgetManagement() {
     }
   };
 
+  const handleEstimateBudget = async () => {
+    if (!activePlan) return;
+
+    try {
+      setEstimateLoading(true);
+      setEstimateError("");
+
+      const data = await estimateBudget(activePlan.id);
+      setEstimatedBudget(data);
+    } catch (estimateError) {
+      console.error("Budget estimation error:", estimateError);
+      setEstimateError(getApiErrorMessage(estimateError, "Unable to estimate budget."));
+    } finally {
+      setEstimateLoading(false);
+    }
+  };
   if (!activePlan) {
     return (
       <ModuleEmpty
@@ -165,12 +245,90 @@ export function BudgetManagement() {
     return <ModuleLoading label="Loading budget data..." />;
   }
 
-  if (error) {
-    return <ModuleError message={error} />;
-  }
-
   return (
     <div className="max-w-7xl mx-auto">
+      <div className="bg-white border-2 border-gray-300 rounded-lg p-6 mb-6">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-xl font-medium flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Automatic Budget Estimate
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Estimate travel costs based on destination, trip duration and average destination prices.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleEstimateBudget}
+            disabled={estimateLoading}
+            className="px-4 py-2 bg-blue-500 text-white border-2 border-blue-600 rounded hover:bg-blue-600 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {estimateLoading ? "Calculating..." : "Estimate Budget"}
+          </button>
+        </div>
+
+        {estimateError && (
+          <p className="text-sm text-red-600 mb-4">{estimateError}</p>
+        )}
+
+        {estimatedBudget && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="border border-gray-300 rounded p-4">
+              <p className="text-sm text-gray-600">Destination</p>
+              <p className="text-lg font-medium">{estimatedBudget.destination}</p>
+            </div>
+
+            <div className="border border-gray-300 rounded p-4">
+              <p className="text-sm text-gray-600">Number of days</p>
+              <p className="text-lg font-medium">{estimatedBudget.numberOfDays}</p>
+            </div>
+
+            <div className="border border-blue-300 bg-blue-50 rounded p-4">
+              <p className="text-sm text-blue-700">Total estimated cost</p>
+              <p className="text-2xl font-semibold text-blue-900">
+                {estimatedBudget.totalEstimatedCost} {estimatedBudget.currency}
+              </p>
+            </div>
+
+            <div className="border border-gray-300 rounded p-4">
+              <p className="text-sm text-gray-600">Accommodation</p>
+              <p className="font-medium">
+                {estimatedBudget.accommodationCost} {estimatedBudget.currency}
+              </p>
+            </div>
+
+            <div className="border border-gray-300 rounded p-4">
+              <p className="text-sm text-gray-600">Food</p>
+              <p className="font-medium">
+                {estimatedBudget.foodCost} {estimatedBudget.currency}
+              </p>
+            </div>
+
+            <div className="border border-gray-300 rounded p-4">
+              <p className="text-sm text-gray-600">Activities</p>
+              <p className="font-medium">
+                {estimatedBudget.activitiesCost} {estimatedBudget.currency}
+              </p>
+            </div>
+
+            <div className="border border-gray-300 rounded p-4">
+              <p className="text-sm text-gray-600">Transport</p>
+              <p className="font-medium">
+                {estimatedBudget.transportCost} {estimatedBudget.currency}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border-2 border-red-300 text-red-700 rounded-lg p-4 mb-6">
+          {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div className="bg-white border-2 border-gray-300 rounded-lg p-6 overflow-hidden min-w-0">
           <div className="flex items-center justify-between gap-2 mb-2">
