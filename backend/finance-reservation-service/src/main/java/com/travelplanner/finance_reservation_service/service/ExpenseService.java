@@ -33,7 +33,7 @@ public class ExpenseService {
                 .toList();
     }
 
-    public List<ExpenseResponseDTO> getExpensesByPlanId(UUID planId, String authHeader) {
+    public List<ExpenseResponseDTO> getExpensesByPlanId(Long planId, String authHeader) {
         validateToken(authHeader); 
         return expenseRepository.findByPlanId(planId).stream()
                 .map(expenseMapper::toResponseDTO)

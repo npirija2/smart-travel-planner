@@ -10,7 +10,7 @@ public class ReservationResponseDTO {
     private UUID id;
     private String type;
     private String details;
-    private UUID  planId;
+    private Long  planId;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private Double price;

@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
@@ -24,11 +25,22 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
     @Override
     public GatewayFilter apply(Config config) {
         return ((exchange, chain) -> {
-            // Skip authentication for login, register and refresh endpoints
             String path = exchange.getRequest().getURI().getPath();
-            if (path.contains("/api/users/login")
+            HttpMethod method = exchange.getRequest().getMethod();
+
+            // Allow browser CORS preflight requests through without auth.
+            if (HttpMethod.OPTIONS.equals(method)) {
+                return chain.filter(exchange);
+            }
+
+            // Skip authentication for public auth endpoints.
+            boolean isPublicAuthRequest =
+                    (path.matches("^/api/users/?$") && HttpMethod.POST.equals(method))
+                    || path.contains("/api/users/login")
                     || path.contains("/api/users/register")
-                    || path.contains("/api/users/refresh")) {
+                    || path.contains("/api/users/refresh");
+
+            if (isPublicAuthRequest) {
 
                 return chain.filter(exchange);
             }

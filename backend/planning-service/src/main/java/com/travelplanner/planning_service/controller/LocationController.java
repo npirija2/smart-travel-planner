@@ -28,6 +28,11 @@ public class LocationController {
         return ResponseEntity.ok(locationService.getById(id));
     }
 
+    @GetMapping("/destination/{destinationId}")
+    public ResponseEntity<List<LocationResponseDTO>> getByDestinationId(@PathVariable Long destinationId) {
+        return ResponseEntity.ok(locationService.getByDestinationId(destinationId));
+    }
+
     @PostMapping
     public ResponseEntity<LocationResponseDTO> create(@Valid @RequestBody LocationRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(locationService.create(dto));

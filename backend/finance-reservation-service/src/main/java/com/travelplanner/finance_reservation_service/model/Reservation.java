@@ -29,7 +29,7 @@ public class Reservation {
     private String details;
 
     @Column(name = "plan_id", nullable = false)
-    private UUID planId;
+    private Long planId;
 
     private LocalDateTime startDate;
     private LocalDateTime endDate;

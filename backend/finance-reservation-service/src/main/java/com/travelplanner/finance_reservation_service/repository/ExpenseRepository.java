@@ -9,6 +9,6 @@ import java.util.UUID;
 
 @Repository
 public interface ExpenseRepository extends JpaRepository<Expense, UUID> {
-    List<Expense> findByPlanId(UUID planId);
+    List<Expense> findByPlanId(Long planId);
     List<Expense> findByCategory(String category);
 }

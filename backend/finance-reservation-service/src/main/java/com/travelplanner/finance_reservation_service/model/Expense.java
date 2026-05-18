@@ -28,7 +28,7 @@ public class Expense {
     private Double amount;
 
     @Column(name = "plan_id", nullable = false)
-    private UUID planId;
+    private Long planId;
 
     private String category;
 

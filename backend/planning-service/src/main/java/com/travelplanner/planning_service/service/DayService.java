@@ -38,6 +38,12 @@ public class DayService {
         return dayRepository.findAll().stream().map(this::map).toList();
     }
 
+    public List<DayResponseDTO> getByTravelPlanId(Long travelPlanId) {
+        return dayRepository.findByTravelPlanId(travelPlanId).stream()
+                .map(this::map)
+                .toList();
+    }
+
     private DayResponseDTO map(Day d) {
         return DayResponseDTO.builder()
                 .id(d.getId())

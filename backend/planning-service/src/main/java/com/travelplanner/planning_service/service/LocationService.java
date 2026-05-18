@@ -32,6 +32,12 @@ public class LocationService {
         return mapToResponseDTO(location);
     }
 
+    public List<LocationResponseDTO> getByDestinationId(Long destinationId) {
+        return locationRepository.findByDestinationId(destinationId).stream()
+                .map(this::mapToResponseDTO)
+                .toList();
+    }
+
     public LocationResponseDTO create(LocationRequestDTO dto) {
         Destination destination = destinationRepository.findById(dto.getDestinationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Destination with id " + dto.getDestinationId() + " not found"));

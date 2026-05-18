@@ -7,6 +7,6 @@ import java.util.UUID;
 public class BudgetResponseDTO {
     private UUID id;
     private Double totalAmount;
-    private UUID planId;
+    private Long planId;
     private String currency;
 }

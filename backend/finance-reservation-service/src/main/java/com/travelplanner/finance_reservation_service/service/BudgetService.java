@@ -36,7 +36,7 @@ public class BudgetService {
                 .toList();
     }
 
-    public List<BudgetResponseDTO> getBudgetsByPlanId(UUID planId, String authHeader) {
+    public List<BudgetResponseDTO> getBudgetsByPlanId(Long planId, String authHeader) {
         validateToken(authHeader); 
         return budgetRepository.findByPlanId(planId).stream()
                 .map(budgetMapper::toResponseDTO)

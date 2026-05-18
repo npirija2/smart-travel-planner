@@ -43,12 +43,12 @@ class ExpenseControllerTest {
     private ExpenseResponseDTO responseDTO;
     private ExpenseRequestDTO requestDTO;
     private UUID expenseId;
-    private UUID planId;
+    private Long planId;
 
     @BeforeEach
     void setUp() {
         expenseId = UUID.randomUUID();
-        planId = UUID.randomUUID();
+        planId = 202L;
         LocalDateTime now = LocalDateTime.now();
 
         responseDTO = new ExpenseResponseDTO();
@@ -113,7 +113,7 @@ class ExpenseControllerTest {
 
         mockMvc.perform(get("/api/expenses/plan/" + planId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].planId").value(planId.toString()));
+                .andExpect(jsonPath("$[0].planId").value(planId));
     }
 
     @Test

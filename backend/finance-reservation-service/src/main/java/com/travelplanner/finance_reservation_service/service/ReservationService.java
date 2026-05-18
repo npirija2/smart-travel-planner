@@ -32,7 +32,7 @@ public class ReservationService {
                 .toList();
     }
 
-    public List<ReservationResponseDTO> getReservationsByPlanId(UUID planId, String authHeader) {
+    public List<ReservationResponseDTO> getReservationsByPlanId(Long planId, String authHeader) {
         validateToken(authHeader);
         return reservationRepository.findByPlanId(planId).stream()
                 .map(reservationMapper::toResponseDTO)

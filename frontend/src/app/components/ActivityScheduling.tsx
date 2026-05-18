@@ -1,0 +1,612 @@
+import { Calendar, Clock, Plus, AlertCircle, Pencil, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { createActivity, deleteActivity, updateActivity } from "../../api/activityService";
+import { getApiErrorMessage } from "../../api/errorUtils";
+import { getTravelPlanDays } from "../../api/planService";
+import { createLocation, getLocationsByDestination } from "../../api/locationService";
+import { useAuth } from "../context/AuthContext";
+import { usePlanContext } from "../context/PlanContext";
+import { ModuleEmpty, ModuleError, ModuleLoading } from "./ModuleState";
+
+const EMPTY_ACTIVITY_FORM = {
+  name: "",
+  description: "",
+  dayId: "",
+  locationId: "",
+  timeslot: "MORNING",
+  startTime: "09:00",
+  endTime: "10:00",
+  duration: "60",
+  status: "PLANNED",
+};
+
+const EMPTY_LOCATION_FORM = {
+  name: "",
+  address: "",
+  type: "ATTRACTION",
+  latitude: "",
+  longitude: "",
+};
+
+function getDefaultTimeslotRange(timeslot) {
+  switch (timeslot) {
+    case "AFTERNOON":
+      return { startTime: "13:00", endTime: "14:30" };
+    case "EVENING":
+      return { startTime: "18:00", endTime: "19:30" };
+    default:
+      return { startTime: "09:00", endTime: "10:30" };
+  }
+}
+
+function toApiActivityPayload(formState, createdBy) {
+  return {
+    name: formState.name.trim(),
+    description: formState.description.trim(),
+    dayId: Number(formState.dayId),
+    createdBy: createdBy ? Number(createdBy) : null,
+    locationId: Number(formState.locationId),
+    timeslot: formState.timeslot,
+    startTime: formState.startTime || null,
+    endTime: formState.endTime || null,
+    duration: formState.duration ? Number(formState.duration) : null,
+    status: formState.status || "PLANNED",
+  };
+}
+
+function toFormState(activity) {
+  return {
+    name: activity.name || "",
+    description: activity.description || "",
+    dayId: String(activity.dayId || ""),
+    locationId: String(activity.locationId || ""),
+    timeslot: activity.timeslot || "MORNING",
+    startTime: activity.startTime ? String(activity.startTime).slice(0, 5) : "",
+    endTime: activity.endTime ? String(activity.endTime).slice(0, 5) : "",
+    duration: activity.duration ? String(activity.duration) : "",
+    status: activity.status || "PLANNED",
+  };
+}
+
+export function ActivityScheduling() {
+  const { activePlan } = usePlanContext();
+  const { currentUser } = useAuth();
+  const [days, setDays] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [editingActivityId, setEditingActivityId] = useState(null);
+  const [activityForm, setActivityForm] = useState(EMPTY_ACTIVITY_FORM);
+  const [locationForm, setLocationForm] = useState(EMPTY_LOCATION_FORM);
+  const [locationError, setLocationError] = useState("");
+  const [savingLocation, setSavingLocation] = useState(false);
+
+  const timeSlots = [
+    { id: "MORNING", label: "Morning", time: "8:00 - 12:00", color: "yellow" },
+    { id: "AFTERNOON", label: "Afternoon", time: "12:00 - 18:00", color: "blue" },
+    { id: "EVENING", label: "Evening", time: "18:00 - 23:00", color: "purple" },
+  ];
+
+  async function loadSchedulingData() {
+    if (!activePlan) {
+      setDays([]);
+      setLocations([]);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      const [dayResponse, locationResponse] = await Promise.all([
+        getTravelPlanDays(activePlan.id),
+        activePlan.destinationId ? getLocationsByDestination(activePlan.destinationId) : Promise.resolve([]),
+      ]);
+
+      setDays(dayResponse);
+      setLocations(locationResponse);
+    } catch (fetchError) {
+      setError(getApiErrorMessage(fetchError, "Unable to load activity scheduling data."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadSchedulingData();
+  }, [activePlan?.id]);
+
+  useEffect(() => {
+    if (!days.length) {
+      setActivityForm(EMPTY_ACTIVITY_FORM);
+      return;
+    }
+
+    setActivityForm((currentForm) => {
+      const nextDayId = currentForm.dayId || String(days[0].id);
+      const nextLocationId = currentForm.locationId || (locations[0] ? String(locations[0].id) : "");
+      return {
+        ...currentForm,
+        dayId: nextDayId,
+        locationId: nextLocationId,
+      };
+    });
+  }, [days, locations]);
+
+  const conflicts = useMemo(() => {
+    return days.flatMap((day, index) =>
+      timeSlots
+        .map((slot) => {
+          const activities = (day.activities || []).filter((activity) => activity.timeslot === slot.id);
+          return activities.length > 2
+            ? { day: index + 1, slot: slot.label.toLowerCase(), message: "This time slot may be too packed." }
+            : null;
+        })
+        .filter(Boolean),
+    );
+  }, [days]);
+
+  const unscheduledActivities = useMemo(
+    () =>
+      days
+        .flatMap((day) => (day.activities || []).map((activity) => ({ ...activity, dayDate: day.date })))
+        .sort((left, right) => {
+          if ((left.dayDate || "") !== (right.dayDate || "")) {
+            return String(left.dayDate || "").localeCompare(String(right.dayDate || ""));
+          }
+
+          return String(left.name || "").localeCompare(String(right.name || ""));
+        }),
+    [days],
+  );
+
+  const canSubmitActivity = Boolean(
+    activityForm.name.trim() &&
+    activityForm.dayId &&
+    activityForm.locationId,
+  );
+
+  const resetForm = () => {
+    setEditingActivityId(null);
+    setSubmitError("");
+    setActivityForm({
+      ...EMPTY_ACTIVITY_FORM,
+      dayId: days[0] ? String(days[0].id) : "",
+      locationId: locations[0] ? String(locations[0].id) : "",
+    });
+  };
+
+  const resetLocationForm = () => {
+    setLocationForm(EMPTY_LOCATION_FORM);
+    setLocationError("");
+  };
+
+  const handleTimeslotChange = (nextTimeslot) => {
+    const nextTimes = getDefaultTimeslotRange(nextTimeslot);
+    setActivityForm((currentForm) => ({
+      ...currentForm,
+      timeslot: nextTimeslot,
+      startTime: currentForm.startTime || nextTimes.startTime,
+      endTime: currentForm.endTime || nextTimes.endTime,
+    }));
+  };
+
+  const handleEdit = (activity) => {
+    setEditingActivityId(activity.id);
+    setSubmitError("");
+    setActivityForm(toFormState(activity));
+  };
+
+  const handleDelete = async (activityId) => {
+    try {
+      setSubmitting(true);
+      setSubmitError("");
+      await deleteActivity(activityId);
+      await loadSchedulingData();
+      if (editingActivityId === activityId) {
+        resetForm();
+      }
+    } catch (deleteError) {
+      setSubmitError(getApiErrorMessage(deleteError, "Unable to remove this activity right now."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!canSubmitActivity) {
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setSubmitError("");
+      const payload = toApiActivityPayload(activityForm, currentUser?.id);
+
+      if (editingActivityId) {
+        await updateActivity(editingActivityId, payload);
+      } else {
+        await createActivity(payload);
+      }
+
+      await loadSchedulingData();
+      resetForm();
+    } catch (submitActivityError) {
+      setSubmitError(getApiErrorMessage(submitActivityError, "Unable to save this activity right now."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCreateLocation = async (event) => {
+    event.preventDefault();
+
+    if (!activePlan?.destinationId) {
+      setLocationError("Select a plan with a destination before adding a location.");
+      return;
+    }
+
+    try {
+      setSavingLocation(true);
+      setLocationError("");
+
+      const newLocation = await createLocation({
+        name: locationForm.name.trim(),
+        address: locationForm.address.trim(),
+        type: locationForm.type,
+        destinationId: Number(activePlan.destinationId),
+        latitude: locationForm.latitude ? Number(locationForm.latitude) : null,
+        longitude: locationForm.longitude ? Number(locationForm.longitude) : null,
+      });
+
+      setLocations((currentLocations) => [...currentLocations, newLocation]);
+      setActivityForm((currentForm) => ({
+        ...currentForm,
+        locationId: String(newLocation.id),
+      }));
+      resetLocationForm();
+    } catch (createLocationError) {
+      setLocationError(getApiErrorMessage(createLocationError, "Unable to add this location right now."));
+    } finally {
+      setSavingLocation(false);
+    }
+  };
+
+  if (!activePlan) return <ModuleEmpty title="No active plan selected" description="Choose a plan to see its generated daily structure and scheduled activities." />;
+  if (loading) return <ModuleLoading label="Loading daily schedule..." />;
+  if (error) return <ModuleError message={error} />;
+  if (!days.length) return <ModuleEmpty title="No day structure available" description="Create a plan first so your trip days can be organized into a schedule." />;
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <div className="bg-white border-2 border-gray-300 rounded-lg p-4 sticky top-6">
+            <h3 className="font-medium mb-3 flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              {editingActivityId ? "Edit Activity" : "Add Activity"}
+            </h3>
+            {submitError ? <div className="mb-4"><ModuleError message={submitError} /></div> : null}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Activity Name</label>
+                <input
+                  type="text"
+                  value={activityForm.name}
+                  onChange={(event) => setActivityForm({ ...activityForm, name: event.target.value })}
+                  placeholder="Enter activity name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Day</label>
+                <select
+                  value={activityForm.dayId}
+                  onChange={(event) => setActivityForm({ ...activityForm, dayId: event.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
+                >
+                  {days.map((day, index) => (
+                    <option key={day.id} value={day.id}>
+                      Day {index + 1} - {new Date(day.date).toLocaleDateString()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Timeslot</label>
+                <select
+                  value={activityForm.timeslot}
+                  onChange={(event) => handleTimeslotChange(event.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
+                >
+                  {timeSlots.map((slot) => (
+                    <option key={slot.id} value={slot.id}>
+                      {slot.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Location</label>
+                <select
+                  value={activityForm.locationId}
+                  onChange={(event) => setActivityForm({ ...activityForm, locationId: event.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="">Select a location</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name} · {location.type}
+                    </option>
+                  ))}
+                </select>
+                {locations.length === 0 ? (
+                  <p className="mt-2 text-xs text-amber-700">
+                    No saved locations yet for this destination. Add one below, then continue with the activity.
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Start Time</label>
+                  <input
+                    type="time"
+                    value={activityForm.startTime}
+                    onChange={(event) => setActivityForm({ ...activityForm, startTime: event.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">End Time</label>
+                  <input
+                    type="time"
+                    value={activityForm.endTime}
+                    onChange={(event) => setActivityForm({ ...activityForm, endTime: event.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Duration (min)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={activityForm.duration}
+                    onChange={(event) => setActivityForm({ ...activityForm, duration: event.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Status</label>
+                  <select
+                    value={activityForm.status}
+                    onChange={(event) => setActivityForm({ ...activityForm, status: event.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="PLANNED">Planned</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Notes</label>
+                <textarea
+                  rows={3}
+                  value={activityForm.description}
+                  onChange={(event) => setActivityForm({ ...activityForm, description: event.target.value })}
+                  placeholder="Add context, meeting points, or reminders"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={submitting || !canSubmitActivity}
+                  className="flex-1 px-4 py-2 bg-blue-500 text-white border-2 border-blue-600 rounded hover:bg-blue-600 disabled:opacity-60"
+                >
+                  {submitting ? "Saving..." : editingActivityId ? "Update Activity" : "Add Activity"}
+                </button>
+                {editingActivityId ? (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                ) : null}
+              </div>
+            </form>
+
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium mb-3">Add Location</h4>
+              {locationError ? <div className="mb-3"><ModuleError message={locationError} /></div> : null}
+              <form onSubmit={handleCreateLocation} className="space-y-3">
+                <input
+                  type="text"
+                  value={locationForm.name}
+                  onChange={(event) => setLocationForm({ ...locationForm, name: event.target.value })}
+                  placeholder="Location name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+                <input
+                  type="text"
+                  value={locationForm.address}
+                  onChange={(event) => setLocationForm({ ...locationForm, address: event.target.value })}
+                  placeholder="Address"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+                <select
+                  value={locationForm.type}
+                  onChange={(event) => setLocationForm({ ...locationForm, type: event.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="ATTRACTION">Attraction</option>
+                  <option value="RESTAURANT">Restaurant</option>
+                  <option value="EVENT">Event</option>
+                  <option value="PARK">Park</option>
+                  <option value="MUSEUM">Museum</option>
+                </select>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="number"
+                    step="any"
+                    value={locationForm.latitude}
+                    onChange={(event) => setLocationForm({ ...locationForm, latitude: event.target.value })}
+                    placeholder="Latitude"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  />
+                  <input
+                    type="number"
+                    step="any"
+                    value={locationForm.longitude}
+                    onChange={(event) => setLocationForm({ ...locationForm, longitude: event.target.value })}
+                    placeholder="Longitude"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={savingLocation || !locationForm.name.trim() || !locationForm.address.trim()}
+                  className="w-full px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-60"
+                >
+                  {savingLocation ? "Saving location..." : "Save location"}
+                </button>
+              </form>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-medium mb-2">Planned Activities</h4>
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {unscheduledActivities.length > 0 ? (
+                  unscheduledActivities.map((activity) => (
+                    <button
+                      key={activity.id}
+                      type="button"
+                      onClick={() => handleEdit(activity)}
+                      className={`w-full text-left border rounded p-3 hover:bg-gray-50 ${
+                        editingActivityId === activity.id ? "border-blue-400 bg-blue-50" : "border-gray-300"
+                      }`}
+                    >
+                      <p className="text-sm font-medium">{activity.name}</p>
+                      <p className="text-xs text-gray-600">
+                        {new Date(activity.dayDate).toLocaleDateString()} · {activity.timeslot}
+                      </p>
+                    </button>
+                  ))
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded p-4 text-sm text-gray-500">
+                    Add the first activity for this plan to start shaping the itinerary.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-3 space-y-6">
+          {conflicts.length > 0 ? (
+            <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-medium text-yellow-900">Schedule Conflicts Detected</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-yellow-700">
+                    {conflicts.map((conflict, index) => (
+                      <li key={index}>Day {conflict.day} - {conflict.slot}: {conflict.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {days.map((day, index) => (
+            <div key={day.id} className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+              <div className="bg-gray-100 border-b border-gray-300 px-6 py-3">
+                <h2 className="font-medium flex items-center gap-2">
+                  <Calendar className="w-5 h-5" />
+                  Day {index + 1} - {new Date(day.date).toLocaleDateString()}
+                </h2>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {timeSlots.map((slot) => {
+                  const activities = (day.activities || []).filter((activity) => activity.timeslot === slot.id);
+                  const hasConflict = conflicts.some((conflict) => conflict.day === index + 1 && conflict.slot === slot.label.toLowerCase());
+
+                  return (
+                    <div key={slot.id} className={`border-2 rounded p-4 ${hasConflict ? "border-yellow-400 bg-yellow-50" : "border-gray-300"}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${
+                            slot.color === "yellow" ? "bg-yellow-400" : slot.color === "blue" ? "bg-blue-400" : "bg-purple-400"
+                          }`} />
+                          <h3 className="font-medium">{slot.label}</h3>
+                          <span className="text-sm text-gray-600">({slot.time})</span>
+                        </div>
+                        <Clock className="w-4 h-4 text-gray-400" />
+                      </div>
+
+                      {activities.length > 0 ? (
+                        <div className="space-y-2">
+                          {activities.map((activity) => (
+                            <div key={activity.id} className="border border-gray-300 rounded p-3 bg-white flex justify-between items-center gap-4">
+                              <div>
+                                <p className="text-sm font-medium">{activity.name}</p>
+                                <p className="text-xs text-gray-600">{activity.locationName || "Location pending"}</p>
+                                {activity.description ? <p className="text-xs text-gray-500 mt-1">{activity.description}</p> : null}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-xs text-gray-500 text-right">
+                                  <p>{activity.duration || 0} min</p>
+                                  <p>{activity.status || "PLANNED"}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEdit(activity)}
+                                  className="p-2 border border-gray-300 rounded hover:bg-gray-50"
+                                  aria-label={`Edit ${activity.name}`}
+                                >
+                                  <Pencil className="w-4 h-4 text-gray-600" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDelete(activity.id)}
+                                  className="p-2 border border-gray-300 rounded hover:bg-red-50"
+                                  aria-label={`Delete ${activity.name}`}
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center text-gray-400 text-sm">
+                          No activities scheduled in this slot yet
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

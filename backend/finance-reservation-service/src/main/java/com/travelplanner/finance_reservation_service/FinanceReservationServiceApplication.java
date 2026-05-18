@@ -1,7 +1,6 @@
 package com.travelplanner.finance_reservation_service;
 
 import java.time.LocalDateTime;
-import java.util.UUID; 
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -29,7 +28,7 @@ public class FinanceReservationServiceApplication {
                           ExpenseRepository eRepo,
                           ReservationRepository rRepo) {
         return args -> {
-            UUID sharedPlanId = UUID.randomUUID();
+            Long sharedPlanId = 1L;
 
             Budget b = Budget.builder()
                     .totalAmount(1000.0)

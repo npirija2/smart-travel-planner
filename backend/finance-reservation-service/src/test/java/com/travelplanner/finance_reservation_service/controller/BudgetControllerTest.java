@@ -46,12 +46,12 @@ class BudgetControllerTest {
     private BudgetResponseDTO responseDTO;
     private BudgetRequestDTO requestDTO;
     private UUID budgetId;
-    private UUID planId;
+    private Long planId;
 
     @BeforeEach
     void setUp() {
         budgetId = UUID.randomUUID();
-        planId = UUID.randomUUID();
+        planId = 101L;
 
         responseDTO = new BudgetResponseDTO();
         responseDTO.setId(budgetId);
@@ -98,7 +98,7 @@ class BudgetControllerTest {
 
         mockMvc.perform(get("/api/budgets/plan/" + planId).header("Authorization", AUTH_HEADER))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].planId").value(planId.toString()));
+                .andExpect(jsonPath("$[0].planId").value(planId));
     }
 
     @Test

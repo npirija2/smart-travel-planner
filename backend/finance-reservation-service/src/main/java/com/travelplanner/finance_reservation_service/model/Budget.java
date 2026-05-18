@@ -20,7 +20,7 @@ public class Budget {
     private Double totalAmount;
 
     @Column(name = "plan_id", nullable = false)
-    private UUID planId; 
+    private Long planId;
 
     private String currency;
 }

@@ -1,6 +1,7 @@
 package com.travelplanner.planning_service.service;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -12,7 +13,9 @@ import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
 import com.travelplanner.planning_service.exception.BadRequestException;
 import com.travelplanner.planning_service.exception.ResourceNotFoundException;
 import com.travelplanner.planning_service.model.Destination;
+import com.travelplanner.planning_service.model.Day;
 import com.travelplanner.planning_service.model.TravelPlan;
+import com.travelplanner.planning_service.repository.DayRepository;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
 import com.travelplanner.planning_service.util.JwtUtils;
@@ -26,6 +29,7 @@ public class TravelPlanService {
 
     private final TravelPlanRepository travelPlanRepository;
     private final DestinationRepository destinationRepository;
+    private final DayRepository dayRepository;
     private final JwtUtils jwtUtils;
 
     private Long getUserIdFromToken(String authHeader) {
@@ -88,7 +92,9 @@ public class TravelPlanService {
                 .status(dto.getStatus())
                 .build();
 
-        return mapToResponseDTO(travelPlanRepository.save(travelPlan));
+        TravelPlan savedPlan = travelPlanRepository.save(travelPlan);
+        synchronizeDays(savedPlan);
+        return mapToResponseDTO(savedPlan);
     }
 
     @Transactional
@@ -114,7 +120,9 @@ public class TravelPlanService {
         travelPlan.setDescription(dto.getDescription());
         travelPlan.setStatus(dto.getStatus());
 
-        return mapToResponseDTO(travelPlanRepository.save(travelPlan));
+        TravelPlan savedPlan = travelPlanRepository.save(travelPlan);
+        synchronizeDays(savedPlan);
+        return mapToResponseDTO(savedPlan);
     }
 
     @Transactional
@@ -150,6 +158,21 @@ public class TravelPlanService {
                 .description(travelPlan.getDescription())
                 .status(travelPlan.getStatus())
                 .build();
+    }
+
+    private void synchronizeDays(TravelPlan travelPlan) {
+        List<Day> existingDays = dayRepository.findByTravelPlanId(travelPlan.getId());
+        java.util.Set<java.time.LocalDate> existingDates = existingDays.stream()
+                .map(Day::getDate)
+                .collect(java.util.stream.Collectors.toSet());
+
+        Stream.iterate(travelPlan.getStartDate(), date -> !date.isAfter(travelPlan.getEndDate()), date -> date.plusDays(1))
+                .filter(date -> !existingDates.contains(date))
+                .map(date -> Day.builder()
+                        .date(date)
+                        .travelPlan(travelPlan)
+                        .build())
+                .forEach(dayRepository::save);
     }
 
     // 1. Dodaj metodu za paginaciju

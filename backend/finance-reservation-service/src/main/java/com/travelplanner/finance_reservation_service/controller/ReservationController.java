@@ -63,7 +63,7 @@ public class ReservationController {
 
     @GetMapping("/plan/{planId}/paged")
     public ResponseEntity<List<Reservation>> getReservationsPaged(
-            @PathVariable UUID planId,
+            @PathVariable Long planId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "price") String sortBy,
@@ -84,7 +84,7 @@ public class ReservationController {
     @GetMapping("/plan/{planId}/premium")
     @Operation(summary = "Get reservations with price higher than minPrice")
     public ResponseEntity<List<Reservation>> getPremiumReservations(
-            @PathVariable UUID planId,
+            @PathVariable Long planId,
             @RequestParam Double minPrice,
             @RequestHeader("Authorization") String authHeader) {
         

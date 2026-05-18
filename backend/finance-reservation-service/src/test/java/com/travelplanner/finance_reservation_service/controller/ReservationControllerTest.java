@@ -60,12 +60,12 @@ class ReservationControllerTest {
     private ReservationResponseDTO responseDTO;
     private ReservationRequestDTO requestDTO;
     private UUID reservationId;
-    private UUID planId;
+    private Long planId;
 
     @BeforeEach
     void setUp() {
         reservationId = UUID.randomUUID();
-        planId = UUID.randomUUID();
+        planId = 303L;
         LocalDateTime now = LocalDateTime.now();
 
         responseDTO = new ReservationResponseDTO();

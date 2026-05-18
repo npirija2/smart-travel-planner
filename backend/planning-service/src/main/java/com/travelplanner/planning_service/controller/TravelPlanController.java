@@ -17,6 +17,14 @@ import com.travelplanner.planning_service.model.PlanReservation;
 import com.travelplanner.planning_service.service.TravelPlanService;
 
 import com.travelplanner.planning_service.dto.PlanReservationRequestDTO;
+import com.travelplanner.planning_service.dto.AttractionRecommendationDTO;
+import com.travelplanner.planning_service.dto.DayDetailResponseDTO;
+import com.travelplanner.planning_service.dto.LocalRecommendationDTO;
+import com.travelplanner.planning_service.dto.RouteOptimizationResponseDTO;
+import com.travelplanner.planning_service.dto.ScheduleLoadResponseDTO;
+import com.travelplanner.planning_service.dto.WaitingTimeInsightDTO;
+import com.travelplanner.planning_service.dto.WeatherForecastResponseDTO;
+import com.travelplanner.planning_service.service.PlanExperienceService;
 import com.travelplanner.planning_service.service.PlanReservationSagaService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 public class TravelPlanController {
     private final PlanReservationSagaService planReservationSagaService;
     private final TravelPlanService travelPlanService;
+    private final PlanExperienceService planExperienceService;
 
     @Value("${server.port}")
     private String port;
@@ -119,5 +128,55 @@ public class TravelPlanController {
     @GetMapping("/{planId}/reservations")
     public ResponseEntity<List<PlanReservation>> getPlanReservations(@PathVariable Long planId) {
         return ResponseEntity.ok(planReservationSagaService.getReservationsForPlan(planId));
+    }
+
+    @GetMapping("/{planId}/days")
+    public ResponseEntity<List<DayDetailResponseDTO>> getPlanDays(
+            @PathVariable Long planId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(planExperienceService.getPlanDays(planId, authHeader));
+    }
+
+    @GetMapping("/{planId}/route-optimization")
+    public ResponseEntity<RouteOptimizationResponseDTO> optimizeRoute(
+            @PathVariable Long planId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(planExperienceService.optimizeRoute(planId, authHeader));
+    }
+
+    @GetMapping("/{planId}/schedule-load")
+    public ResponseEntity<ScheduleLoadResponseDTO> analyzeScheduleLoad(
+            @PathVariable Long planId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(planExperienceService.analyzeScheduleLoad(planId, authHeader));
+    }
+
+    @GetMapping("/{planId}/attractions")
+    public ResponseEntity<List<AttractionRecommendationDTO>> getAttractions(
+            @PathVariable Long planId,
+            @RequestParam(required = false, defaultValue = "") String interest,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(planExperienceService.getAttractionRecommendations(planId, interest, authHeader));
+    }
+
+    @GetMapping("/{planId}/weather")
+    public ResponseEntity<List<WeatherForecastResponseDTO>> getWeatherForecast(
+            @PathVariable Long planId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(planExperienceService.getWeatherForecast(planId, authHeader));
+    }
+
+    @GetMapping("/{planId}/local-recommendations")
+    public ResponseEntity<List<LocalRecommendationDTO>> getLocalRecommendations(
+            @PathVariable Long planId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(planExperienceService.getLocalRecommendations(planId, authHeader));
+    }
+
+    @GetMapping("/{planId}/waiting-times")
+    public ResponseEntity<List<WaitingTimeInsightDTO>> getWaitingTimeInsights(
+            @PathVariable Long planId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(planExperienceService.getWaitingTimeInsights(planId, authHeader));
     }
 }

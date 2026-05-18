@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID; 
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/expenses")
@@ -40,7 +40,7 @@ public class ExpenseController {
     @GetMapping("/plan/{planId}")
     @Operation(summary = "Get expenses by plan ID")
     public ResponseEntity<List<ExpenseResponseDTO>> getExpensesByPlanId(
-            @PathVariable UUID planId,
+            @PathVariable Long planId,
             @RequestHeader("Authorization") String authHeader) { // DODANO
         return ResponseEntity.ok(expenseService.getExpensesByPlanId(planId, authHeader));
     }
