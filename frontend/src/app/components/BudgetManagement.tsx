@@ -1,6 +1,6 @@
-import { AlertCircle, DollarSign, PieChart, Plus, TrendingUp } from "lucide-react";
+import { AlertCircle, DollarSign, Pencil, PieChart, Plus, Trash2, TrendingUp, X } from "lucide-react";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { createBudget, estimateBudget, getBudgetsByPlan } from "../../api/budgetService";
+import { createBudget, deleteBudget, estimateBudget, getBudgetsByPlan, updateBudget } from "../../api/budgetService";
 import { createExpense, getExpensesByPlan } from "../../api/expenseService";
 import { getApiErrorMessage } from "../../api/errorUtils";
 import { usePlanContext } from "../context/PlanContext";
@@ -65,6 +65,7 @@ export function BudgetManagement() {
     totalAmount: "",
     currency: "EUR",
   });
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
 
   const [expenseForm, setExpenseForm] = useState({
     amount: "",
@@ -165,28 +166,70 @@ export function BudgetManagement() {
     return amount;
   };
 
+  const resetBudgetForm = () => {
+    setEditingBudgetId(null);
+    setBudgetForm({
+      totalAmount: "",
+      currency: "EUR",
+    });
+  };
+
   const handleCreateBudget = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const totalAmount = validateAmount(budgetForm.totalAmount, "Budget");
 
-    if (totalAmount === null) {
+    if (totalAmount === null || !activePlan) {
       return;
     }
 
     try {
       setError("");
 
-      await createBudget({
+      const payload = {
         totalAmount,
         planId: activePlan.id,
         currency: budgetForm.currency,
-      });
+      };
 
-      setBudgetForm({ totalAmount: "", currency: budgetForm.currency });
+      if (editingBudgetId) {
+        await updateBudget(editingBudgetId, payload);
+      } else {
+        await createBudget(payload);
+      }
+
+      resetBudgetForm();
       await loadBudgetData();
     } catch (createError) {
-      setError(getApiErrorMessage(createError, "Unable to create budget."));
+      console.error("Create budget error:", createError);
+      setError(getApiErrorMessage(createError, editingBudgetId ? "Unable to update budget." : "Unable to create budget."));
+    }
+  };
+
+  const handleEditBudget = (budget: Budget) => {
+    setEditingBudgetId(budget.id || null);
+    setBudgetForm({
+      totalAmount: String(budget.totalAmount ?? ""),
+      currency: budget.currency || "EUR",
+    });
+    setError("");
+  };
+
+  const handleDeleteBudget = async (budgetId?: string) => {
+    if (!budgetId) return;
+
+    try {
+      setError("");
+      await deleteBudget(budgetId);
+
+      if (editingBudgetId === budgetId) {
+        resetBudgetForm();
+      }
+
+      await loadBudgetData();
+    } catch (deleteError) {
+      console.error("Delete budget error:", deleteError);
+      setError(getApiErrorMessage(deleteError, "Unable to delete budget."));
     }
   };
 
@@ -195,7 +238,7 @@ export function BudgetManagement() {
 
     const amount = validateAmount(expenseForm.amount, "Expense");
 
-    if (amount === null) {
+    if (amount === null || !activePlan) {
       return;
     }
 
@@ -232,6 +275,7 @@ export function BudgetManagement() {
       setEstimateLoading(false);
     }
   };
+
   if (!activePlan) {
     return (
       <ModuleEmpty
@@ -363,9 +407,57 @@ export function BudgetManagement() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border-2 border-gray-300 rounded-lg p-6 overflow-hidden min-w-0">
+          <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
             <h2 className="text-xl font-medium mb-4 flex items-center gap-2">
-              <PieChart className="w-5 h-5 shrink-0" />
+              <DollarSign className="w-5 h-5" />
+              Saved Budgets
+            </h2>
+
+            {budgets.length === 0 ? (
+              <ModuleEmpty
+                title="No budgets yet"
+                description="Create a budget to start planning expected trip costs."
+              />
+            ) : (
+              <div className="space-y-3">
+                {budgets.map((budget) => (
+                  <div
+                    key={budget.id}
+                    className={`border rounded p-4 flex justify-between items-start gap-4 ${
+                      editingBudgetId === budget.id ? "border-blue-400 bg-blue-50" : "border-gray-300"
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {formatAmount(budget.totalAmount)} {budget.currency || "EUR"}
+                      </p>
+                      <p className="text-sm text-gray-600">Plan ID: {budget.planId}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEditBudget(budget)}
+                        className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBudget(budget.id)}
+                        className="px-3 py-2 border border-gray-300 rounded hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+            <h2 className="text-xl font-medium mb-4 flex items-center gap-2">
+              <PieChart className="w-5 h-5" />
               Expense Categories
             </h2>
 
@@ -432,8 +524,8 @@ export function BudgetManagement() {
             className="bg-white border-2 border-gray-300 rounded-lg p-4 space-y-3"
           >
             <h3 className="font-medium flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Budget
+              {editingBudgetId ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {editingBudgetId ? "Edit Budget" : "Add Budget"}
             </h3>
 
             <input
@@ -459,9 +551,20 @@ export function BudgetManagement() {
               className="w-full px-3 py-2 border border-gray-300 rounded"
             />
 
-            <button className="w-full px-4 py-2 bg-blue-500 text-white border-2 border-blue-600 rounded hover:bg-blue-600">
-              Save Budget
-            </button>
+            <div className="flex gap-2">
+              <button className="flex-1 px-4 py-2 bg-blue-500 text-white border-2 border-blue-600 rounded hover:bg-blue-600">
+                {editingBudgetId ? "Update Budget" : "Save Budget"}
+              </button>
+              {editingBudgetId ? (
+                <button
+                  type="button"
+                  onClick={resetBudgetForm}
+                  className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
           </form>
 
           <form

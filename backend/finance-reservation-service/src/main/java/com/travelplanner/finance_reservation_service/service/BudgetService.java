@@ -57,7 +57,7 @@ public class BudgetService {
 
     public List<BudgetResponseDTO> getBudgetsByPlanId(Long planId, String authHeader) {
         validateToken(authHeader);
-        return budgetRepository.findByPlanId(planId).stream()
+        return budgetRepository.findAllByPlanId(planId).stream()
                 .map(budgetMapper::toResponseDTO)
                 .toList();
     }
@@ -65,12 +65,14 @@ public class BudgetService {
     public BudgetResponseDTO getBudgetByPlanId(Long planId, String authHeader) {
         validateToken(authHeader);
 
-        Budget budget = budgetRepository.findByPlanId(planId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Budget for plan with ID " + planId + " not found"
-                ));
+        List<Budget> budgets = budgetRepository.findAllByPlanId(planId);
+        if (budgets.isEmpty()) {
+            throw new ResourceNotFoundException(
+                    "Budget for plan with ID " + planId + " not found"
+            );
+        }
 
-        return budgetMapper.toResponseDTO(budget);
+        return budgetMapper.toResponseDTO(budgets.get(0));
     }
     @Transactional
     public BudgetResponseDTO createBudget(BudgetRequestDTO dto, String authHeader) {

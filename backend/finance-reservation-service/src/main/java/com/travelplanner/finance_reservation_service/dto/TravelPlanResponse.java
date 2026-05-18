@@ -2,10 +2,16 @@ package com.travelplanner.finance_reservation_service.dto;
 
 import java.time.LocalDate;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TravelPlanResponse {
 
     private Long id;
+    @JsonAlias({"title", "name"})
     private String title;
+    @JsonAlias({"destination", "destinationName"})
     private String destination;
     private LocalDate startDate;
     private LocalDate endDate;

@@ -1,18 +1,19 @@
 package com.travelplanner.finance_reservation_service.service;
 
-import java.util.Optional;
-import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestTemplate;
 
@@ -61,7 +62,7 @@ class BudgetServiceTest {
     }
 
     @Test
-    void testGetBudgetByPlanId_Success() {
+    void testGetBudgetByPlanIdSuccess() {
         Long planId = 3L;
         UUID id = UUID.randomUUID();
 
