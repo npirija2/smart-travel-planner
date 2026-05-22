@@ -44,6 +44,10 @@ public class UserService {
 
     @Transactional
     public UserResponseDTO createUser(UserRequestDTO request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email is already registered");
+        }
+
         User user = userMapper.toEntity(request);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         
@@ -73,6 +77,10 @@ public class UserService {
     public UserResponseDTO updateUser(Integer id, UserRequestDTO request) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + id));
+
+        if (!existingUser.getEmail().equals(request.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email is already registered");
+        }
 
         existingUser.setUsername(request.getUsername());
         existingUser.setEmail(request.getEmail());

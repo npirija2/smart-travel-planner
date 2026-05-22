@@ -118,4 +118,37 @@ class UserServiceIntegrationTest {
                 .andExpect(jsonPath("$.timestamp").exists())
                 .andExpect(jsonPath("$.status").value(400));
     }
+
+    @Test
+    void shouldReturnBadRequestWhenCreatingUserWithDuplicateEmail() throws Exception {
+        String firstRequest = """
+                {
+                  "username": "nejra",
+                  "email": "nejra@example.com",
+                  "password": "password123"
+                }
+                """;
+
+        String duplicateRequest = """
+                {
+                  "username": "nejra-two",
+                  "email": "nejra@example.com",
+                  "password": "password456"
+                }
+                """;
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(firstRequest))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(duplicateRequest))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error").value("bad_request"))
+                .andExpect(jsonPath("$.message").value("Email is already registered"))
+                .andExpect(jsonPath("$.status").value(400));
+    }
 }
