@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Plus, 
   Route, 
@@ -28,6 +28,7 @@ function formatDateRange(startDate, endDate) {
 }
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { plans, loading, error, activePlanId, setActivePlanId } = usePlanContext();
 
@@ -91,7 +92,10 @@ export function Dashboard() {
             {plans.map((trip) => (
               <button
                 key={trip.id}
-                onClick={() => setActivePlanId(trip.id)}
+                onClick={() => {
+                  setActivePlanId(trip.id);
+                  navigate("/");
+                }}
                 className={`w-full text-left border rounded p-4 hover:bg-gray-50 ${
                   activePlanId === trip.id ? "border-blue-400 bg-blue-50" : "border-gray-300"
                 }`}
