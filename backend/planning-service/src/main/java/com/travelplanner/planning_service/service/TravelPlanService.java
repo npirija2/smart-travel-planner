@@ -12,13 +12,13 @@ import com.travelplanner.planning_service.dto.TravelPlanRequestDTO;
 import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
 import com.travelplanner.planning_service.exception.BadRequestException;
 import com.travelplanner.planning_service.exception.ResourceNotFoundException;
-import com.travelplanner.planning_service.model.Destination;
 import com.travelplanner.planning_service.model.Day;
+import com.travelplanner.planning_service.model.Destination;
 import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.DayRepository;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
-import com.travelplanner.planning_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +30,7 @@ public class TravelPlanService {
     private final TravelPlanRepository travelPlanRepository;
     private final DestinationRepository destinationRepository;
     private final DayRepository dayRepository;
-    private final JwtUtils jwtUtils;
+    private final JwtValidator jwtUtils;
 
     private Long getUserIdFromToken(String authHeader) {
         String token = authHeader.substring(7);

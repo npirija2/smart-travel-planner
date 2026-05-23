@@ -8,7 +8,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 
-import com.travelplanner.api_gateway.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.ExpiredJwtException;
 
@@ -16,7 +16,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
     @Autowired
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtValidator;
 
     public AuthenticationFilter() {
         super(Config.class);
@@ -54,11 +54,11 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             }
 
             try {
-                jwtUtils.validateToken(authHeader);
+                jwtValidator.validateToken(authHeader);
 
-                String role = jwtUtils.extractRole(authHeader);
+                String role = jwtValidator.extractRole(authHeader);
 
-                String type = jwtUtils.extractType(authHeader);
+                String type = jwtValidator.extractType(authHeader);
 
                 if (!type.equals("access")) {
                     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);

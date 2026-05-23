@@ -14,13 +14,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.travelplanner.shared.security.JwtValidator;
 import com.travelplanner.user_service.dto.AuthResponseDTO;
 import com.travelplanner.user_service.dto.LoginRequest;
 import com.travelplanner.user_service.dto.RefreshTokenRequest;
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
 import com.travelplanner.user_service.service.UserService;
-import com.travelplanner.user_service.util.JwtUtils;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService userService;
-    private final JwtUtils jwtUtils;
+    private final JwtValidator jwtValidator;
 
     @PostMapping
     public ResponseEntity<UserResponseDTO> createUser(@Valid @RequestBody UserRequestDTO request) {
@@ -81,8 +81,8 @@ public class UserController {
 
         String token = authHeader.substring(7);
 
-        Integer userId = jwtUtils.extractUserId(token);
+        Long userId = jwtValidator.extractUserId(token);
 
-        return ResponseEntity.ok(userService.getUserById(userId));
+        return ResponseEntity.ok(userService.getUserById(userId.intValue()));
     }
 }

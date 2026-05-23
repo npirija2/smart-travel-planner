@@ -1,4 +1,4 @@
-package com.travelplanner.finance_reservation_service.util;
+package com.travelplanner.shared.security;
 
 import java.security.KeyFactory;
 import java.security.PublicKey;
@@ -12,11 +12,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 
 @Component
-public class JwtUtils {
+public class JwtValidator {
 
     private final PublicKey publicKey;
 
-    public JwtUtils() throws Exception {
+    public JwtValidator() throws Exception {
         this.publicKey = loadPublicKey();
     }
 
@@ -50,5 +50,23 @@ public class JwtUtils {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    public void validateToken(String token) {
+        getClaims(token);
+    }
+
+    public String extractRole(String token) {
+        return getClaims(token)
+                .get("role", String.class);
+    }
+
+    public String extractType(String token) {
+        return getClaims(token)
+                .get("type", String.class);
+    }
+
+    public Long extractUserId(String token) {
+        return Long.valueOf(getClaims(token).getSubject());
     }
 }

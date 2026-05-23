@@ -23,7 +23,7 @@ import com.travelplanner.planning_service.model.Destination;
 import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
-import com.travelplanner.planning_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.Claims;
 
@@ -39,7 +39,7 @@ class TravelPlanServiceTest {
     private DestinationRepository destinationRepository;
 
     @Mock
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     @Mock
     private Claims claims;

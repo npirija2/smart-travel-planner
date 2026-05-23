@@ -11,17 +11,17 @@ import com.travelplanner.communication_service.exception.ResourceNotFoundExcepti
 import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.Vote;
 import com.travelplanner.communication_service.repository.VoteRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 @Service
 public class VoteService {
 
     private final VoteRepository voteRepository;
-    private final JwtUtils jwtUtils; 
+    private final JwtValidator jwtValidator;
 
-    public VoteService(VoteRepository voteRepository, JwtUtils jwtUtils) {
+    public VoteService(VoteRepository voteRepository, JwtValidator jwtValidator) {
         this.voteRepository = voteRepository;
-        this.jwtUtils = jwtUtils;
+        this.jwtValidator = jwtValidator;
     }
 
     public VoteResponseDTO createVote(VoteRequestDTO requestDTO, String authHeader) {
@@ -89,7 +89,7 @@ public class VoteService {
         }
         String token = authHeader.substring(7);
         try {
-            jwtUtils.getClaims(token);
+            jwtValidator.validateToken(token);
         } catch (Exception e) {
             throw new UnauthorizedException("Invalid token");
         }

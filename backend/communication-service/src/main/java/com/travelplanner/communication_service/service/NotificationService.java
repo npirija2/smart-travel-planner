@@ -12,15 +12,15 @@ import com.travelplanner.communication_service.exception.ResourceNotFoundExcepti
 import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 @Service
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final JwtUtils jwtUtils;
+    private final JwtValidator jwtUtils;
 
-    public NotificationService(NotificationRepository notificationRepository, JwtUtils jwtUtils) {
+    public NotificationService(NotificationRepository notificationRepository, JwtValidator jwtUtils) {
         this.notificationRepository = notificationRepository;
         this.jwtUtils = jwtUtils;
     }

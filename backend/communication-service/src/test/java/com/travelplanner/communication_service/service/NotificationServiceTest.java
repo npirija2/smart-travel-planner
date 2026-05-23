@@ -27,7 +27,7 @@ import com.travelplanner.communication_service.dto.NotificationResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
@@ -38,7 +38,7 @@ class NotificationServiceTest {
     private NotificationRepository notificationRepository;
 
     @Mock
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     @InjectMocks
     private NotificationService notificationService;

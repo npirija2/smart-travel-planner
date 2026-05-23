@@ -16,7 +16,7 @@ import com.travelplanner.communication_service.repository.NotificationRepository
 import com.travelplanner.communication_service.repository.ReviewRepository;
 @EnableDiscoveryClient
 @EnableFeignClients
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.travelplanner")
 public class CommunicationServiceApplication {
 
 	public static void main(String[] args) {

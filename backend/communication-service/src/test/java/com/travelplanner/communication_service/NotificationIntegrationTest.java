@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.communication_service.repository.NotificationRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.Claims;
 
@@ -44,7 +44,7 @@ class NotificationIntegrationTest {
     private NotificationRepository notificationRepository;
 
     @MockBean
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     @BeforeEach
     void setUp() {

@@ -13,21 +13,21 @@ import com.travelplanner.communication_service.exception.ServiceUnavailableExcep
 import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.Review;
 import com.travelplanner.communication_service.repository.ReviewRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 @Service
 public class ReviewService {
 
     private final ReviewRepository reviewRepository;
     private final PlanningServiceClient planningServiceClient;
-    private final JwtUtils jwtUtils;
+    private final JwtValidator jwtValidator;
 
     public ReviewService(ReviewRepository reviewRepository,
                          PlanningServiceClient planningServiceClient,
-                         JwtUtils jwtUtils) { 
+                         JwtValidator jwtValidator) { 
         this.reviewRepository = reviewRepository;
         this.planningServiceClient = planningServiceClient;
-        this.jwtUtils = jwtUtils;
+        this.jwtValidator = jwtValidator;
     }
 
     public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, String authHeader) {
@@ -106,7 +106,7 @@ public class ReviewService {
                     "Invalid or missing Authorization header");
         }
         try {
-            jwtUtils.getClaims(authHeader.substring(7));
+            jwtValidator.validateToken(authHeader.substring(7));
         } catch (Exception e) {
             throw new UnauthorizedException("Invalid token");
         }

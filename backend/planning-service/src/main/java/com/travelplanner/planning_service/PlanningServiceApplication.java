@@ -1,5 +1,17 @@
 package com.travelplanner.planning_service;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
+
 import com.travelplanner.planning_service.model.Activity;
 import com.travelplanner.planning_service.model.Day;
 import com.travelplanner.planning_service.model.Destination;
@@ -10,19 +22,8 @@ import com.travelplanner.planning_service.repository.DayRepository;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.LocationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Profile;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.travelplanner")
 public class PlanningServiceApplication {
 
     public static void main(String[] args) {

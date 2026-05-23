@@ -23,7 +23,7 @@ import com.travelplanner.finance_reservation_service.dto.ReservationResponseDTO;
 import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 import com.travelplanner.finance_reservation_service.service.ReservationService;
-import com.travelplanner.finance_reservation_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -40,7 +40,7 @@ public class ReservationController {
 
     private final ReservationService reservationService;
     private final ReservationRepository reservationRepository;
-    private final JwtUtils jwtUtils;
+    private final JwtValidator jwtUtils;
 
     @GetMapping
     @Operation(summary = "Get all reservations")

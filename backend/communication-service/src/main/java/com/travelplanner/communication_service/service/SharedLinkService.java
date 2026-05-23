@@ -11,17 +11,17 @@ import com.travelplanner.communication_service.exception.ResourceNotFoundExcepti
 import com.travelplanner.communication_service.exception.UnauthorizedException;
 import com.travelplanner.communication_service.model.SharedLink;
 import com.travelplanner.communication_service.repository.SharedLinkRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 @Service
 public class SharedLinkService {
 
     private final SharedLinkRepository sharedLinkRepository;
-    private final JwtUtils jwtUtils; 
+    private final JwtValidator jwtValidator;
 
-    public SharedLinkService(SharedLinkRepository sharedLinkRepository, JwtUtils jwtUtils) {
+    public SharedLinkService(SharedLinkRepository sharedLinkRepository, JwtValidator jwtValidator) {
         this.sharedLinkRepository = sharedLinkRepository;
-        this.jwtUtils = jwtUtils;
+        this.jwtValidator = jwtValidator;
     }
 
     public SharedLinkResponseDTO createSharedLink(SharedLinkRequestDTO requestDTO, String authHeader) {
@@ -86,7 +86,7 @@ public class SharedLinkService {
         }
         String token = authHeader.substring(7);
         try {
-            jwtUtils.getClaims(token);
+            jwtValidator.validateToken(token);
         } catch (Exception e) {
             throw new UnauthorizedException("Invalid token");
         }
