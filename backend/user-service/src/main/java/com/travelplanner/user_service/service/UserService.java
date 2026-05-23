@@ -7,6 +7,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.travelplanner.shared.security.JwtValidator;
 import com.travelplanner.user_service.dto.AuthResponseDTO;
 import com.travelplanner.user_service.dto.UserRequestDTO;
 import com.travelplanner.user_service.dto.UserResponseDTO;
@@ -25,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final JwtUtils jwtUtils;
+    private final JwtValidator jwtValidator;
     private final BCryptPasswordEncoder passwordEncoder;
 
     @Transactional
@@ -104,9 +106,9 @@ public class UserService {
     public AuthResponseDTO refreshToken(String refreshToken) {
 
         try {
-            Integer userId = jwtUtils.extractUserId(refreshToken);
+            Long userId = jwtValidator.extractUserId(refreshToken);
 
-            User user = userRepository.findById(userId)
+            User user = userRepository.findById(userId.intValue())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             String newAccessToken = jwtUtils.generateToken(user);

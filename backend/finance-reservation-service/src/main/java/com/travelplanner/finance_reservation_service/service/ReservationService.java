@@ -12,7 +12,7 @@ import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundE
 import com.travelplanner.finance_reservation_service.mapper.ReservationMapper;
 import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
-import com.travelplanner.finance_reservation_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,7 +23,7 @@ public class ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final ReservationMapper reservationMapper;
-    private final JwtUtils jwtUtils;
+    private final JwtValidator jwtUtils;
 
     public List<ReservationResponseDTO> getAllReservations(String authHeader) {
         validateToken(authHeader);

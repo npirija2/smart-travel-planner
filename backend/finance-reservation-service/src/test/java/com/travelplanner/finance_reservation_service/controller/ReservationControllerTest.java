@@ -32,7 +32,7 @@ import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundE
 import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 import com.travelplanner.finance_reservation_service.service.ReservationService;
-import com.travelplanner.finance_reservation_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.Claims;
 
@@ -52,7 +52,7 @@ class ReservationControllerTest {
     private ReservationRepository reservationRepository;
 
     @MockBean
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     @Autowired
     private ObjectMapper objectMapper;

@@ -15,7 +15,7 @@ import com.travelplanner.finance_reservation_service.repository.BudgetRepository
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.travelplanner")
 public class FinanceReservationServiceApplication {
 
     public static void main(String[] args) {

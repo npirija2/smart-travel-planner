@@ -1,26 +1,32 @@
 package com.travelplanner.finance_reservation_service.service;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.travelplanner.finance_reservation_service.dto.ReservationRequestDTO;
 import com.travelplanner.finance_reservation_service.dto.ReservationResponseDTO;
 import com.travelplanner.finance_reservation_service.exception.ResourceNotFoundException;
 import com.travelplanner.finance_reservation_service.mapper.ReservationMapper;
 import com.travelplanner.finance_reservation_service.model.Reservation;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
-import com.travelplanner.finance_reservation_service.util.JwtUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import com.travelplanner.shared.security.JwtValidator;
 
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
@@ -34,7 +40,7 @@ class ReservationServiceTest {
     private ReservationMapper reservationMapper;
 
     @Mock
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     @InjectMocks
     private ReservationService reservationService;

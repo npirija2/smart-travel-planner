@@ -1,24 +1,29 @@
 package com.travelplanner.communication_service.service;
 
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.travelplanner.communication_service.dto.SharedLinkRequestDTO;
 import com.travelplanner.communication_service.dto.SharedLinkResponseDTO;
 import com.travelplanner.communication_service.exception.ResourceNotFoundException;
 import com.travelplanner.communication_service.model.SharedLink;
 import com.travelplanner.communication_service.repository.SharedLinkRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import com.travelplanner.shared.security.JwtValidator;
 
 @ExtendWith(MockitoExtension.class)
 class SharedLinkServiceTest {
@@ -29,7 +34,7 @@ class SharedLinkServiceTest {
     private SharedLinkRepository sharedLinkRepository;
 
     @Mock
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     @InjectMocks
     private SharedLinkService sharedLinkService;

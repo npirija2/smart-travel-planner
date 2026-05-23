@@ -1,5 +1,25 @@
 package com.travelplanner.communication_service.service;
 
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.travelplanner.communication_service.client.PlanningServiceClient;
 import com.travelplanner.communication_service.dto.ReviewRequestDTO;
 import com.travelplanner.communication_service.dto.ReviewResponseDTO;
@@ -7,22 +27,7 @@ import com.travelplanner.communication_service.exception.ResourceNotFoundExcepti
 import com.travelplanner.communication_service.exception.ServiceUnavailableException;
 import com.travelplanner.communication_service.model.Review;
 import com.travelplanner.communication_service.repository.ReviewRepository;
-import com.travelplanner.communication_service.util.JwtUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import com.travelplanner.shared.security.JwtValidator;
 
 @ExtendWith(MockitoExtension.class)
 class ReviewServiceTest {
@@ -36,7 +41,7 @@ class ReviewServiceTest {
     private PlanningServiceClient planningServiceClient;
 
     @Mock
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     @InjectMocks
     private ReviewService reviewService;

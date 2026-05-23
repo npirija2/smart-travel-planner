@@ -1,22 +1,25 @@
 package com.travelplanner.finance_reservation_service.service;
 
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
 import com.travelplanner.finance_reservation_service.mapper.BudgetMapper;
 import com.travelplanner.finance_reservation_service.model.Budget;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
-import com.travelplanner.finance_reservation_service.util.JwtUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.Optional;
-import java.util.UUID;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import com.travelplanner.shared.security.JwtValidator;
 
 @ExtendWith(MockitoExtension.class)
 public class BudgetServiceTest {
@@ -30,7 +33,7 @@ public class BudgetServiceTest {
     private ExpenseRepository expenseRepository;
 
     @Mock
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     private BudgetMapper budgetMapper;
 

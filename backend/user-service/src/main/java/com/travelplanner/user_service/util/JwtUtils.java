@@ -2,9 +2,7 @@ package com.travelplanner.user_service.util;
 
 import java.security.KeyFactory;
 import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,11 +20,9 @@ import io.jsonwebtoken.SignatureAlgorithm;
 public class JwtUtils {
 
     private final PrivateKey privateKey;
-    private final PublicKey publicKey;
 
     public JwtUtils() throws Exception {
         this.privateKey = loadPrivateKey();
-        this.publicKey = loadPublicKey();
     }
 
     private PrivateKey loadPrivateKey() throws Exception {
@@ -64,7 +60,8 @@ public class JwtUtils {
                 .setSubject(user.getId().toString())
                 .setIssuedAt(new Date())
                 .setExpiration(
-                        new Date(System.currentTimeMillis() + 1000 * 60 * 15))
+                        new Date(System.currentTimeMillis()
+                                + 1000L * 60 * 15))
                 .signWith(privateKey, SignatureAlgorithm.RS256)
                 .compact();
     }
@@ -84,39 +81,5 @@ public class JwtUtils {
                                 + 1000L * 60 * 60 * 24 * 7))
                 .signWith(privateKey, SignatureAlgorithm.RS256)
                 .compact();
-    }
-
-    public Integer extractUserId(String token) {
-
-        try {
-
-            return Integer.parseInt(
-                    Jwts.parserBuilder()
-                            .setSigningKey(publicKey)
-                            .build()
-                            .parseClaimsJws(token)
-                            .getBody()
-                            .getSubject());
-
-        } catch (Exception e) {
-            throw new RuntimeException("Invalid token");
-        }
-    }
-    private PublicKey loadPublicKey() throws Exception {
-
-        ClassPathResource resource = new ClassPathResource("keys/public.pem");
-
-        String key = new String(resource.getInputStream().readAllBytes());
-
-        key = key
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replace("-----END PUBLIC KEY-----", "")
-                .replaceAll("\\s", "");
-
-        byte[] decoded = Base64.getDecoder().decode(key);
-
-        X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
-
-        return KeyFactory.getInstance("RSA").generatePublic(spec);
     }
 }

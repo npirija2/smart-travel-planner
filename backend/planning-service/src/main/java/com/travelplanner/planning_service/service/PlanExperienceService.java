@@ -29,7 +29,7 @@ import com.travelplanner.planning_service.repository.ActivityRepository;
 import com.travelplanner.planning_service.repository.DayRepository;
 import com.travelplanner.planning_service.repository.LocationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
-import com.travelplanner.planning_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +43,7 @@ public class PlanExperienceService {
     private final DayRepository dayRepository;
     private final ActivityRepository activityRepository;
     private final LocationRepository locationRepository;
-    private final JwtUtils jwtUtils;
+    private final JwtValidator jwtUtils;
 
     public List<DayDetailResponseDTO> getPlanDays(Long planId, String authHeader) {
         TravelPlan plan = getAuthorizedPlan(planId, authHeader);

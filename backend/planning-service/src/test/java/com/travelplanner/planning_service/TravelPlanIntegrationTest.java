@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.travelplanner.planning_service.model.Destination;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
-import com.travelplanner.planning_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.Claims;
 
@@ -49,7 +49,7 @@ class TravelPlanIntegrationTest {
     private TravelPlanRepository travelPlanRepository;
 
     @MockBean
-    private JwtUtils jwtUtils;
+    private JwtValidator jwtUtils;
 
     private Destination destination;
 

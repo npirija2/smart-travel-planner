@@ -14,7 +14,7 @@ import com.travelplanner.finance_reservation_service.model.Budget;
 import com.travelplanner.finance_reservation_service.model.Expense;
 import com.travelplanner.finance_reservation_service.repository.BudgetRepository;
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
-import com.travelplanner.finance_reservation_service.util.JwtUtils;
+import com.travelplanner.shared.security.JwtValidator;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor; 
@@ -27,7 +27,7 @@ public class BudgetService {
     private final BudgetRepository budgetRepository;
     private final ExpenseRepository expenseRepository;
     private final BudgetMapper budgetMapper;
-    private final JwtUtils jwtUtils; 
+    private final JwtValidator jwtUtils; 
 
     public List<BudgetResponseDTO> getAllBudgets(String authHeader) {
         validateToken(authHeader); 
