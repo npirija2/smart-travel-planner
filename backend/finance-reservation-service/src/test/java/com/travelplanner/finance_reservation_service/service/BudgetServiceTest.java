@@ -7,7 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -75,7 +75,7 @@ class BudgetServiceTest {
         responseDTO.setId(id);
         responseDTO.setTotalAmount(100.0);
 
-        when(budgetRepository.findByPlanId(planId)).thenReturn(Optional.of(budget));
+        when(budgetRepository.findAllByPlanId(planId)).thenReturn(List.of(budget));
         when(budgetMapper.toResponseDTO(budget)).thenReturn(responseDTO);
 
         BudgetResponseDTO result = budgetService.getBudgetByPlanId(planId, AUTH_HEADER);
@@ -83,6 +83,6 @@ class BudgetServiceTest {
         assertNotNull(result);
         assertEquals(id, result.getId());
         assertEquals(100.0, result.getTotalAmount());
-        verify(budgetRepository, times(1)).findByPlanId(planId);
+        verify(budgetRepository, times(1)).findAllByPlanId(planId);
     }
 }
