@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.doNothing;
@@ -70,14 +69,14 @@ class ReviewServiceTest {
     @Test
     void shouldCreateReviewSuccessfully() {
         // Mock-amo provjeru aktivnosti (vraća true)
-        when(planningServiceClient.activityExists(500L, AUTH_HEADER)).thenReturn(true);
+        when(planningServiceClient.activityExists(500L)).thenReturn(true);
         when(reviewRepository.save(any(Review.class))).thenReturn(review);
 
         ReviewResponseDTO response = reviewService.createReview(requestDTO, AUTH_HEADER);
 
         assertNotNull(response);
         assertEquals(5, response.getRating());
-        verify(planningServiceClient).activityExists(500L, AUTH_HEADER);
+        verify(planningServiceClient).activityExists(500L);
         verify(reviewRepository).save(any(Review.class));
     }
 
@@ -104,7 +103,7 @@ class ReviewServiceTest {
     @Test
     void shouldUpdateReviewSuccessfully() {
         when(reviewRepository.findById(1)).thenReturn(Optional.of(review));
-        when(planningServiceClient.activityExists(anyLong(), eq(AUTH_HEADER))).thenReturn(true);
+        when(planningServiceClient.activityExists(anyLong())).thenReturn(true);
         when(reviewRepository.save(any(Review.class))).thenReturn(review);
 
         ReviewResponseDTO updated = reviewService.updateReview(1, requestDTO, AUTH_HEADER);
@@ -128,7 +127,7 @@ class ReviewServiceTest {
     @Test
     void shouldThrowExceptionWhenActivityDoesNotExist() {
         // Mock-amo da aktivnost NE postoji
-        when(planningServiceClient.activityExists(500L, AUTH_HEADER)).thenReturn(false);
+        when(planningServiceClient.activityExists(500L)).thenReturn(false);
 
         assertThrows(ResourceNotFoundException.class, () -> {
             reviewService.createReview(requestDTO, AUTH_HEADER);
@@ -141,7 +140,7 @@ class ReviewServiceTest {
     @Test
     void shouldThrowServiceUnavailableWhenPlanningServiceFails() {
         // Simuliramo pad Planning servisa (baca Exception)
-        when(planningServiceClient.activityExists(anyLong(), eq(AUTH_HEADER))).thenThrow(new RuntimeException("Down"));
+        when(planningServiceClient.activityExists(anyLong())).thenThrow(new RuntimeException("Down"));
 
         assertThrows(ServiceUnavailableException.class, () -> {
             reviewService.createReview(requestDTO, AUTH_HEADER);
