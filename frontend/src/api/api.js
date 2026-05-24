@@ -1,5 +1,14 @@
 import axios from 'axios';
 
+const ACTIVE_PLAN_STORAGE_KEY = 'active-plan-id';
+
+function clearClientSession() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem(ACTIVE_PLAN_STORAGE_KEY);
+  sessionStorage.clear();
+}
+
 const api = axios.create({
   baseURL: 'http://localhost:8080/api',
 });
@@ -51,9 +60,7 @@ api.interceptors.response.use(
         return api(originalRequest);
 
       } catch (refreshError) {
-
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
+        clearClientSession();
 
         window.location.href = '/login';
 

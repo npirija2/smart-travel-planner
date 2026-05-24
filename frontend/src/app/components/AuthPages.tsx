@@ -1,6 +1,6 @@
 import { LogIn, MapPinned, UserPlus } from "lucide-react";
 import { useState } from "react";
-import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errorUtils";
 import { useAuth } from "../context/AuthContext";
 
@@ -34,7 +34,6 @@ function AuthShell({ eyebrow, title, description, icon: Icon, children, footer }
 export function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -43,15 +42,13 @@ export function LoginPage() {
     return <Navigate to="/" replace />;
   }
 
-  const redirectPath = location.state?.from || "/";
-
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
       setSubmitting(true);
       setErrorMessage("");
       await login(formData);
-      navigate(redirectPath, { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, "Login failed. Please check your credentials."));
     } finally {

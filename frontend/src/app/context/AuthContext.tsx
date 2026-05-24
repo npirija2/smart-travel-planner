@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { getCurrentUser, loginUser, registerUser } from "../../api/userService";
 
 const AuthContext = createContext(null);
+const ACTIVE_PLAN_STORAGE_KEY = "active-plan-id";
 
 function readStoredToken() {
   return localStorage.getItem("token");
@@ -10,6 +11,8 @@ function readStoredToken() {
 function clearStoredAuth() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
+  localStorage.removeItem(ACTIVE_PLAN_STORAGE_KEY);
+  sessionStorage.clear();
 }
 
 function isTokenExpired(token) {
