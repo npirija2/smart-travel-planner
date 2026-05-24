@@ -3,6 +3,9 @@ package com.travelplanner.finance_reservation_service.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +40,38 @@ public class ReservationService {
         return reservationRepository.findByPlanId(planId).stream()
                 .map(reservationMapper::toResponseDTO)
                 .toList();
+    }
+
+    public List<Reservation> getReservationsPaged(
+            Long planId,
+            int page,
+            int size,
+            String sortBy,
+            String direction,
+            String authHeader) {
+
+        validateToken(authHeader);
+
+        Sort sorting = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sorting);
+
+        return reservationRepository
+                .findByPlanId(planId, pageable)
+                .getContent();
+    }
+
+    public List<Reservation> getPremiumReservations(
+            Long planId,
+            Double minPrice,
+            String authHeader) {
+
+        validateToken(authHeader);
+
+        return reservationRepository
+                .findPremiumReservations(planId, minPrice);
     }
 
     public ReservationResponseDTO getReservationById(UUID id, String authHeader) {
