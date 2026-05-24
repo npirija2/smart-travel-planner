@@ -15,7 +15,10 @@ import com.travelplanner.finance_reservation_service.repository.BudgetRepository
 import com.travelplanner.finance_reservation_service.repository.ExpenseRepository;
 import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
 @SpringBootApplication(scanBasePackages = "com.travelplanner")
+@Slf4j
 public class FinanceReservationServiceApplication {
 
     public static void main(String[] args) {
@@ -56,7 +59,7 @@ public class FinanceReservationServiceApplication {
                     .build();
             rRepo.save(r);
 
-            System.out.println("--- Testni podaci ubačeni sa Plan ID: " + sharedPlanId + " ---");
+            log.info("Seeded finance reservation test data with shared plan ID {}", sharedPlanId);
         };
     }
 }
