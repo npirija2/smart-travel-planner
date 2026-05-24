@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.travelplanner.planning_service.dto.TravelPlanBasicResponse;
 import com.travelplanner.planning_service.dto.TravelPlanRequestDTO;
 import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
 import com.travelplanner.planning_service.exception.BadRequestException;
@@ -201,5 +202,28 @@ public class TravelPlanService {
         TravelPlan travelPlan = travelPlanRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Travel plan not found"));
         return mapToResponseDTO(travelPlan);
+    }
+
+    public TravelPlanBasicResponse getTravelPlanBasicById(Long id) {
+        TravelPlan plan = travelPlanRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Travel plan not found"));
+
+        String destinationName = null;
+
+        if (plan.getDestination() != null) {
+            destinationName = plan.getDestination().getName();
+        }
+
+        System.out.println("PLAN ID = " + plan.getId());
+        System.out.println("PLAN DESTINATION OBJECT = " + plan.getDestination());
+        System.out.println("DESTINATION NAME = " + destinationName);
+
+        return new TravelPlanBasicResponse(
+                plan.getId(),
+                null,
+                destinationName,
+                plan.getStartDate(),
+                plan.getEndDate()
+        );
     }
 }

@@ -33,31 +33,37 @@ public class FinanceReservationServiceApplication {
         return args -> {
             Long sharedPlanId = 1L;
 
-            Budget b = Budget.builder()
-                    .totalAmount(1000.0)
-                    .planId(sharedPlanId) 
-                    .currency("EUR")
-                    .build();
-            bRepo.save(b);
+            if (bRepo.count() == 0) {
+                Budget b = Budget.builder()
+                        .totalAmount(1000.0)
+                        .planId(sharedPlanId)
+                        .currency("EUR")
+                        .build();
+                bRepo.save(b);
+            }
 
-            Expense e = Expense.builder()
-                    .amount(200.0)
-                    .planId(sharedPlanId) 
-                    .category("Food")
-                    .date(LocalDateTime.now())
-                    .build();
-            eRepo.save(e);
+            if (eRepo.count() == 0) {
+                Expense e = Expense.builder()
+                        .amount(200.0)
+                        .planId(sharedPlanId)
+                        .category("Food")
+                        .date(LocalDateTime.now())
+                        .build();
+                eRepo.save(e);
+            }
 
-            Reservation r = Reservation.builder()
-                    .type("Hotel")
-                    .details("Sarajevo")
-                    .planId(sharedPlanId) 
-                    .startDate(LocalDateTime.now())
-                    .endDate(LocalDateTime.now().plusDays(2))
-                    .price(300.0)
-                    .status("CONFIRMED")
-                    .build();
-            rRepo.save(r);
+            if (rRepo.count() == 0) {
+                Reservation r = Reservation.builder()
+                        .type("Hotel")
+                        .details("Sarajevo")
+                        .planId(sharedPlanId)
+                        .startDate(LocalDateTime.now())
+                        .endDate(LocalDateTime.now().plusDays(2))
+                        .price(300.0)
+                        .status("CONFIRMED")
+                        .build();
+                rRepo.save(r);
+            }
 
             log.info("Seeded finance reservation test data with shared plan ID {}", sharedPlanId);
         };

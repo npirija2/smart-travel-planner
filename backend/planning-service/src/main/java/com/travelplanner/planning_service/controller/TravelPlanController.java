@@ -22,6 +22,7 @@ import com.travelplanner.planning_service.dto.DayDetailResponseDTO;
 import com.travelplanner.planning_service.dto.LocalRecommendationDTO;
 import com.travelplanner.planning_service.dto.RouteOptimizationResponseDTO;
 import com.travelplanner.planning_service.dto.ScheduleLoadResponseDTO;
+import com.travelplanner.planning_service.dto.TravelPlanBasicResponse;
 import com.travelplanner.planning_service.dto.WaitingTimeInsightDTO;
 import com.travelplanner.planning_service.dto.WeatherForecastResponseDTO;
 import com.travelplanner.planning_service.service.PlanExperienceService;
@@ -48,10 +49,9 @@ public class TravelPlanController {
         return ResponseEntity.ok(travelPlanService.getAll(authHeader));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<TravelPlanResponseDTO> getById(@PathVariable Long id, 
-                                                         @RequestHeader("Authorization") String authHeader) {
-        return ResponseEntity.ok(travelPlanService.getById(id, authHeader));
+   @GetMapping("/{id}")
+    public ResponseEntity<TravelPlanBasicResponse> getTravelPlanById(@PathVariable Long id) {
+        return ResponseEntity.ok(travelPlanService.getTravelPlanBasicById(id));
     }
 
     @PostMapping
