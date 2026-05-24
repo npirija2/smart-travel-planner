@@ -35,6 +35,19 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  async function authenticate(credentials) {
+    const authData = await loginUser(credentials.email, credentials.password);
+    localStorage.setItem("token", authData.accessToken);
+    if (authData.refreshToken) {
+      localStorage.setItem("refreshToken", authData.refreshToken);
+    }
+
+    setToken(authData.accessToken);
+    const user = await getCurrentUser();
+    setCurrentUser(user);
+    return user;
+  }
+
   useEffect(() => {
     async function hydrateUser() {
       const storedToken = readStoredToken();
@@ -77,19 +90,14 @@ export function AuthProvider({ children }) {
       loading,
       isAuthenticated: Boolean(token),
       async login(credentials) {
-        const authData = await loginUser(credentials.email, credentials.password);
-        localStorage.setItem("token", authData.accessToken);
-        if (authData.refreshToken) {
-          localStorage.setItem("refreshToken", authData.refreshToken);
-        }
-
-        setToken(authData.accessToken);
-        const user = await getCurrentUser();
-        setCurrentUser(user);
-        return user;
+        return authenticate(credentials);
       },
       async register(payload) {
-        return registerUser(payload);
+        await registerUser(payload);
+        return authenticate({
+          email: payload.email,
+          password: payload.password,
+        });
       },
       logout() {
         clearStoredAuth();
