@@ -1,20 +1,30 @@
 package com.travelplanner.finance_reservation_service.controller;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.travelplanner.finance_reservation_service.dto.BudgetRequestDTO;
 import com.travelplanner.finance_reservation_service.dto.BudgetResponseDTO;
 import com.travelplanner.finance_reservation_service.service.BudgetService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/budgets")
@@ -27,7 +37,7 @@ public class BudgetController {
     @GetMapping
     @Operation(summary = "Get all budgets")
     public ResponseEntity<List<BudgetResponseDTO>> getAllBudgets(
-            @RequestHeader("Authorization") String authHeader) { // DODANO
+            @RequestHeader("Authorization") String authHeader) { 
         return ResponseEntity.ok(budgetService.getAllBudgets(authHeader));
     }
 
@@ -39,7 +49,7 @@ public class BudgetController {
     })
     public ResponseEntity<BudgetResponseDTO> getBudgetById(
             @PathVariable UUID id,
-            @RequestHeader("Authorization") String authHeader) { // DODANO
+            @RequestHeader("Authorization") String authHeader) { 
         return ResponseEntity.ok(budgetService.getBudgetById(id, authHeader));
     }
 
@@ -47,7 +57,7 @@ public class BudgetController {
     @Operation(summary = "Get budgets by plan ID")
     public ResponseEntity<List<BudgetResponseDTO>> getBudgetsByPlanId(
             @PathVariable Long planId,
-            @RequestHeader("Authorization") String authHeader) { // DODANO
+            @RequestHeader("Authorization") String authHeader) { 
         return ResponseEntity.ok(budgetService.getBudgetsByPlanId(planId, authHeader));
     }
 
@@ -59,7 +69,7 @@ public class BudgetController {
     })
     public ResponseEntity<BudgetResponseDTO> createBudget(
             @Valid @RequestBody BudgetRequestDTO dto,
-            @RequestHeader("Authorization") String authHeader) { // DODANO
+            @RequestHeader("Authorization") String authHeader) {
         return ResponseEntity.status(HttpStatus.CREATED).body(budgetService.createBudget(dto, authHeader));
     }
 
@@ -68,7 +78,7 @@ public class BudgetController {
     public ResponseEntity<BudgetResponseDTO> updateBudget(
             @PathVariable UUID id,
             @Valid @RequestBody BudgetRequestDTO dto,
-            @RequestHeader("Authorization") String authHeader) { // DODANO
+            @RequestHeader("Authorization") String authHeader) {
         return ResponseEntity.ok(budgetService.updateBudget(id, dto, authHeader));
     }
 
@@ -76,7 +86,7 @@ public class BudgetController {
     @Operation(summary = "Delete a budget")
     public ResponseEntity<Void> deleteBudget(
             @PathVariable UUID id,
-            @RequestHeader("Authorization") String authHeader) { // DODANO
+            @RequestHeader("Authorization") String authHeader) { 
         budgetService.deleteBudget(id, authHeader);
         return ResponseEntity.noContent().build();
     }

@@ -3,9 +3,6 @@ package com.travelplanner.finance_reservation_service.controller;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,9 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.travelplanner.finance_reservation_service.dto.ReservationRequestDTO;
 import com.travelplanner.finance_reservation_service.dto.ReservationResponseDTO;
 import com.travelplanner.finance_reservation_service.model.Reservation;
-import com.travelplanner.finance_reservation_service.repository.ReservationRepository;
 import com.travelplanner.finance_reservation_service.service.ReservationService;
-import com.travelplanner.shared.security.JwtValidator;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -39,8 +34,6 @@ import lombok.RequiredArgsConstructor;
 public class ReservationController {
 
     private final ReservationService reservationService;
-    private final ReservationRepository reservationRepository;
-    private final JwtValidator jwtUtils;
 
     @GetMapping
     @Operation(summary = "Get all reservations")
@@ -70,27 +63,29 @@ public class ReservationController {
             @RequestParam(defaultValue = "desc") String direction,
             @RequestHeader("Authorization") String authHeader) {
 
-        validateToken(authHeader); // Provjera jer ovdje direktno koristimo repository
-
-        Sort sorting = direction.equalsIgnoreCase("desc") 
-                    ? Sort.by(sortBy).descending() 
-                    : Sort.by(sortBy).ascending();
-
-        Pageable pageable = PageRequest.of(page, size, sorting);
-        
-        return ResponseEntity.ok(reservationRepository.findByPlanId(planId, pageable).getContent());
+        return ResponseEntity.ok(
+                reservationService.getReservationsPaged(
+                        planId,
+                        page,
+                        size,
+                        sortBy,
+                        direction,
+                        authHeader
+                ));
     }
 
     @GetMapping("/plan/{planId}/premium")
-    @Operation(summary = "Get reservations with price higher than minPrice")
     public ResponseEntity<List<Reservation>> getPremiumReservations(
             @PathVariable Long planId,
             @RequestParam Double minPrice,
             @RequestHeader("Authorization") String authHeader) {
-        
-        validateToken(authHeader); // Provjera za direktni repository poziv
-        
-        return ResponseEntity.ok(reservationRepository.findPremiumReservations(planId, minPrice));
+
+        return ResponseEntity.ok(
+                reservationService.getPremiumReservations(
+                        planId,
+                        minPrice,
+                        authHeader
+                ));
     }
 
     @PostMapping
@@ -108,13 +103,5 @@ public class ReservationController {
             @RequestHeader("Authorization") String authHeader) {
         reservationService.deleteReservation(id, authHeader);
         return ResponseEntity.noContent().build();
-    }
-
-    // Pomoćna metoda za metode koje direktno koriste repository
-    private void validateToken(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
-        }
-        jwtUtils.getClaims(authHeader.substring(7));
     }
 }
