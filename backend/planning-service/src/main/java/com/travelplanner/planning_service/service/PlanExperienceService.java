@@ -44,6 +44,7 @@ public class PlanExperienceService {
     private final ActivityRepository activityRepository;
     private final LocationRepository locationRepository;
     private final JwtValidator jwtUtils;
+    private final WeatherForecastService weatherForecastService;
 
     public List<DayDetailResponseDTO> getPlanDays(Long planId, String authHeader) {
         TravelPlan plan = getAuthorizedPlan(planId, authHeader);
@@ -121,13 +122,12 @@ public class PlanExperienceService {
 
     public List<WeatherForecastResponseDTO> getWeatherForecast(Long planId, String authHeader) {
         TravelPlan plan = getAuthorizedPlan(planId, authHeader);
-        List<Day> days = dayRepository.findByTravelPlanId(plan.getId()).stream()
+        List<LocalDate> dates = dayRepository.findByTravelPlanId(plan.getId()).stream()
                 .sorted(Comparator.comparing(Day::getDate))
+                .map(Day::getDate)
                 .toList();
 
-        return days.stream()
-                .map(day -> buildForecast(plan, day.getDate()))
-                .toList();
+        return weatherForecastService.getForecastForPlan(plan, dates);
     }
 
     public List<LocalRecommendationDTO> getLocalRecommendations(Long planId, String authHeader) {
@@ -301,35 +301,6 @@ public class PlanExperienceService {
                 .totalDurationMinutes(totalDuration)
                 .intensity(intensity)
                 .warning(warning)
-                .build();
-    }
-
-    private WeatherForecastResponseDTO buildForecast(TravelPlan plan, LocalDate date) {
-        int seed = Math.abs((plan.getDestination().getName() + date).hashCode());
-        String[] conditions = {"Sunny", "Cloudy", "Rain", "Windy"};
-        String condition = conditions[seed % conditions.length];
-        int temperature = 16 + (seed % 15);
-
-        String recommendation = switch (condition) {
-            case "Sunny" -> "Great day for outdoor attractions and walking routes.";
-            case "Cloudy" -> "Flexible weather for mixed indoor and outdoor activities.";
-            case "Rain" -> "Prioritize museums, dining, and covered attractions.";
-            default -> "Keep transit time light and avoid overly packed routes.";
-        };
-
-        String suggestedTimeslot = switch (condition) {
-            case "Sunny" -> "Morning";
-            case "Cloudy" -> "Afternoon";
-            case "Rain" -> "Evening";
-            default -> "Midday";
-        };
-
-        return WeatherForecastResponseDTO.builder()
-                .date(date)
-                .condition(condition)
-                .temperatureCelsius(temperature)
-                .recommendation(recommendation)
-                .suggestedTimeslot(suggestedTimeslot)
                 .build();
     }
 
