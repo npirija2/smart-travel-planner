@@ -32,7 +32,7 @@ public class ReviewService {
 
     public ReviewResponseDTO createReview(ReviewRequestDTO requestDTO, String authHeader) {
         validateToken(authHeader);
-        validateActivityExists(requestDTO.getActivityId(), authHeader); // Prosljeđujemo token dalje
+        validateActivityExists(requestDTO.getActivityId());
 
         Review review = new Review();
         review.setUserId(requestDTO.getUserId());
@@ -65,7 +65,7 @@ public class ReviewService {
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Review not found with id " + id));
 
-        validateActivityExists(requestDto.getActivityId(), authHeader);
+        validateActivityExists(requestDto.getActivityId());
 
         review.setUserId(requestDto.getUserId());
         review.setActivityId(requestDto.getActivityId());
@@ -112,12 +112,11 @@ public class ReviewService {
         }
     }
 
-    private void validateActivityExists(int activityId, String authHeader) {
+    private void validateActivityExists(int activityId) {
         Boolean exists;
 
         try {
-            // TOKEN RELAY: Prosljeđujemo authHeader u Planning Service poziv
-            exists = planningServiceClient.activityExists((long) activityId, authHeader);
+            exists = planningServiceClient.activityExists((long) activityId);
         } catch (Exception e) {
             throw new ServiceUnavailableException("Planning service trenutno nije dostupan.");
         }

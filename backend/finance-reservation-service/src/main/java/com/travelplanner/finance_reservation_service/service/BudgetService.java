@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -117,7 +115,7 @@ public class BudgetService {
     public BudgetEstimateResponse estimateBudget(Long planId, String authHeader) {
         validateToken(authHeader);
 
-        TravelPlanResponse plan = getTravelPlanFromPlanningService(planId, authHeader);
+        TravelPlanResponse plan = getTravelPlanFromPlanningService(planId);
 
         if (plan == null) {
             throw new ResourceNotFoundException("Travel plan with ID " + planId + " not found");
@@ -162,20 +160,15 @@ public class BudgetService {
         );
     }
 
-    private TravelPlanResponse getTravelPlanFromPlanningService(Long planId, String authHeader) {
+    private TravelPlanResponse getTravelPlanFromPlanningService(Long planId) {
         String url = "http://localhost:8082/api/travel-plans/" + planId;
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, authHeader);
-
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-
         ResponseEntity<TravelPlanResponse> response = restTemplate.exchange(
-                url,
-                HttpMethod.GET,
-                entity,
-                TravelPlanResponse.class
-        );
+            url,
+            HttpMethod.GET,
+            null,
+            TravelPlanResponse.class
+    );
 
         return response.getBody();
     }

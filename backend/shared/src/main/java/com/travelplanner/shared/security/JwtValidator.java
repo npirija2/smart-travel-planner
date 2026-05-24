@@ -5,6 +5,7 @@ import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -81,5 +82,14 @@ public class JwtValidator {
 
     public Long extractUserId(String token) {
         return Long.valueOf(getClaims(token).getSubject());
+    }
+
+    public HttpHeaders createAuthHeaders(String authHeader) {
+
+        HttpHeaders headers = new HttpHeaders();
+
+        headers.set(HttpHeaders.AUTHORIZATION, authHeader);
+
+        return headers;
     }
 }
