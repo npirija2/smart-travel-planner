@@ -24,8 +24,6 @@ const EMPTY_LOCATION_FORM = {
   name: "",
   address: "",
   type: "ATTRACTION",
-  latitude: "",
-  longitude: "",
 };
 
 function getDefaultTimeslotRange(timeslot) {
@@ -258,8 +256,6 @@ export function ActivityScheduling() {
         address: locationForm.address.trim(),
         type: locationForm.type,
         destinationId: Number(activePlan.destinationId),
-        latitude: locationForm.latitude ? Number(locationForm.latitude) : null,
-        longitude: locationForm.longitude ? Number(locationForm.longitude) : null,
       });
 
       setLocations((currentLocations) => [...currentLocations, newLocation]);
@@ -459,24 +455,6 @@ export function ActivityScheduling() {
                   <option value="PARK">Park</option>
                   <option value="MUSEUM">Museum</option>
                 </select>
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="number"
-                    step="any"
-                    value={locationForm.latitude}
-                    onChange={(event) => setLocationForm({ ...locationForm, latitude: event.target.value })}
-                    placeholder="Latitude"
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    value={locationForm.longitude}
-                    onChange={(event) => setLocationForm({ ...locationForm, longitude: event.target.value })}
-                    placeholder="Longitude"
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                  />
-                </div>
                 <button
                   type="submit"
                   disabled={savingLocation || !locationForm.name.trim() || !locationForm.address.trim()}
