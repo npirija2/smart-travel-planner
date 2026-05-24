@@ -14,7 +14,10 @@ import com.travelplanner.communication_service.model.Notification;
 import com.travelplanner.communication_service.repository.NotificationRepository;
 import com.travelplanner.shared.security.JwtValidator;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
+@Slf4j
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
@@ -112,13 +115,10 @@ public class NotificationService {
         String token = authHeader.substring(7);
         try {
             jwtUtils.getClaims(token);
-        }catch (Exception e) {
-
-    e.printStackTrace();
-
-    throw new UnauthorizedException(
-            "Invalid or expired token");
-}
+        } catch (Exception e) {
+            log.warn("Rejected notification request because the token is invalid or expired", e);
+            throw new UnauthorizedException("Invalid or expired token");
+        }
     }
 
     private Notification mapToEntity(NotificationRequestDTO requestDTO) {

@@ -17,7 +17,10 @@ import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.extern.slf4j.Slf4j;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
+@Slf4j
 public class LoadBalanceTest {
 
     @Autowired
@@ -72,10 +75,10 @@ public class LoadBalanceTest {
         long durationLB = System.currentTimeMillis() - startLB;
         executor.shutdown();
 
-        System.out.println("\nSA LOAD BALANCINGOM");
-        System.out.printf( "8082 : %3d zahtjeva          %n", count8082.get());
-        System.out.printf( "8083 : %3d zahtjeva          %n", count8083.get());
-        System.out.printf( "Ukupno vrijeme : %4d ms                %n", durationLB);
+        log.info("Load balancing test results");
+        log.info("8082 handled {} requests", count8082.get());
+        log.info("8083 handled {} requests", count8083.get());
+        log.info("Total load-balanced duration: {} ms", durationLB);
 
         Thread.sleep(2000);
 
@@ -111,8 +114,8 @@ public class LoadBalanceTest {
         long durationDirect = System.currentTimeMillis() - startDirect;
         executor2.shutdown();
 
-        System.out.println("\nBEZ LOAD BALANCINGA");
-        System.out.printf( " 8082 : %3d zahtjeva   %n", directCount.get());
-        System.out.printf( " Ukupno vrijeme : %4d ms         %n", durationDirect);
+        log.info("Direct routing test results");
+        log.info("8082 handled {} direct requests", directCount.get());
+        log.info("Total direct duration: {} ms", durationDirect);
     }
 }
