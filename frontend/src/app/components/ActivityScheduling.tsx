@@ -455,9 +455,6 @@ export function ActivityScheduling() {
                   <option value="PARK">Park</option>
                   <option value="MUSEUM">Museum</option>
                 </select>
-                <p className="text-xs text-gray-500">
-                  Coordinates are optional and will be handled automatically later through a map-based location picker.
-                </p>
                 <button
                   type="submit"
                   disabled={savingLocation || !locationForm.name.trim() || !locationForm.address.trim()}
