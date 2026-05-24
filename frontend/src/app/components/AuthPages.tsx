@@ -1,6 +1,6 @@
 import { LogIn, MapPinned, UserPlus } from "lucide-react";
 import { useState } from "react";
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { getApiErrorMessage } from "../../api/errorUtils";
 import { useAuth } from "../context/AuthContext";
 
@@ -35,11 +35,9 @@ export function LoginPage() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const registered = searchParams.get("registered") === "1";
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -72,12 +70,6 @@ export function LoginPage() {
       <p className="text-sm font-medium text-gray-600 mb-2">Welcome back</p>
       <h2 className="text-2xl font-medium mb-2">Login</h2>
       <p className="text-sm text-gray-600 mb-6">Sign in to access your saved trips, schedules, reservations, and planning tools.</p>
-
-      {registered ? (
-        <div className="bg-green-50 border border-green-300 rounded p-4 text-sm text-green-800 mb-4">
-          Registration successful. You can sign in now.
-        </div>
-      ) : null}
 
       {errorMessage ? (
         <div className="bg-red-50 border border-red-300 rounded p-4 text-sm text-red-800 mb-4">
@@ -139,7 +131,7 @@ export function RegisterPage() {
       setSubmitting(true);
       setErrorMessage("");
       await register(formData);
-      navigate("/login?registered=1", { replace: true });
+      navigate("/", { replace: true });
     } catch (error) {
       setErrorMessage(getApiErrorMessage(error, "Registration failed. Please review your details."));
     } finally {
