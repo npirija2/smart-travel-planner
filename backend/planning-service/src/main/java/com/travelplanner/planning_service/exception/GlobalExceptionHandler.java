@@ -6,7 +6,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -44,13 +47,13 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-public ResponseEntity<ApiErrorResponse> handleGeneral(Exception ex) {
-    ex.printStackTrace();
+    public ResponseEntity<ApiErrorResponse> handleGeneral(Exception ex) {
+        log.error("Unhandled exception in planning-service", ex);
 
-    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ApiErrorResponse.builder()
-                    .error("internal_error")
-                    .message(ex.getMessage())
-                    .build());
-}
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiErrorResponse.builder()
+                        .error("internal_error")
+                        .message(ex.getMessage())
+                        .build());
+    }
 }
