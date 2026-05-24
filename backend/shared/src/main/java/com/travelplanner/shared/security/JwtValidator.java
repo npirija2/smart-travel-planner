@@ -55,7 +55,20 @@ public class JwtValidator {
     public void validateToken(String token) {
         getClaims(token);
     }
+    
+    public void validateAuthorizationHeader(String authHeader) {
 
+        if (authHeader == null ||
+                !authHeader.startsWith("Bearer ")) {
+
+            throw new RuntimeException(
+                    "Invalid or missing Authorization header");
+        }
+
+        String token = authHeader.substring(7);
+
+        validateToken(token);
+    }
     public String extractRole(String token) {
         return getClaims(token)
                 .get("role", String.class);

@@ -29,14 +29,14 @@ public class ReservationService {
     private final JwtValidator jwtUtils;
 
     public List<ReservationResponseDTO> getAllReservations(String authHeader) {
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
         return reservationRepository.findAll().stream()
                 .map(reservationMapper::toResponseDTO)
                 .toList();
     }
 
     public List<ReservationResponseDTO> getReservationsByPlanId(Long planId, String authHeader) {
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
         return reservationRepository.findByPlanId(planId).stream()
                 .map(reservationMapper::toResponseDTO)
                 .toList();
@@ -50,7 +50,7 @@ public class ReservationService {
             String direction,
             String authHeader) {
 
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
 
         Sort sorting = direction.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
@@ -68,14 +68,14 @@ public class ReservationService {
             Double minPrice,
             String authHeader) {
 
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
 
         return reservationRepository
                 .findPremiumReservations(planId, minPrice);
     }
 
     public ReservationResponseDTO getReservationById(UUID id, String authHeader) {
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation with ID " + id + " not found"));
         return reservationMapper.toResponseDTO(reservation);
@@ -83,7 +83,7 @@ public class ReservationService {
 
     @Transactional
     public ReservationResponseDTO createReservation(ReservationRequestDTO dto, String authHeader) {
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
         Reservation reservation = reservationMapper.toEntity(dto);
         Reservation saved = reservationRepository.save(reservation);
         return reservationMapper.toResponseDTO(saved);
@@ -91,7 +91,7 @@ public class ReservationService {
 
     @Transactional
     public ReservationResponseDTO updateReservation(UUID id, ReservationRequestDTO dto, String authHeader) {
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
         Reservation reservation = reservationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Reservation with ID " + id + " not found"));
         
@@ -103,19 +103,10 @@ public class ReservationService {
 
     @Transactional
     public void deleteReservation(UUID id, String authHeader) {
-        validateToken(authHeader);
+        jwtUtils.validateAuthorizationHeader(authHeader);
         if (!reservationRepository.existsById(id)) {
             throw new ResourceNotFoundException("Reservation with ID " + id + " not found");
         }
         reservationRepository.deleteById(id);
-    }
-
-    // Pomoćna metoda za validaciju tokena
-    private void validateToken(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new RuntimeException("Invalid or missing Authorization header");
-        }
-        String token = authHeader.substring(7);
-        jwtUtils.getClaims(token);
     }
 }
