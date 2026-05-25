@@ -37,6 +37,25 @@ function getDefaultTimeslotRange(timeslot) {
   }
 }
 
+function getDurationInMinutes(startTime, endTime) {
+  if (!startTime || !endTime) {
+    return 0;
+  }
+
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+
+  const start = startHour * 60 + startMinute;
+  const end = endHour * 60 + endMinute;
+
+  return Math.max(end - start, 0);
+}
+
+function timeToMinutes(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 function toApiActivityPayload(formState, createdBy) {
   return {
     name: formState.name.trim(),
@@ -47,7 +66,7 @@ function toApiActivityPayload(formState, createdBy) {
     timeslot: formState.timeslot,
     startTime: formState.startTime || null,
     endTime: formState.endTime || null,
-    duration: formState.duration ? Number(formState.duration) : null,
+    duration: getDurationInMinutes(formState.startTime, formState.endTime, ),
     status: formState.status || "PLANNED",
   };
 }
@@ -80,6 +99,8 @@ export function ActivityScheduling() {
   const [locationForm, setLocationForm] = useState(EMPTY_LOCATION_FORM);
   const [locationError, setLocationError] = useState("");
   const [savingLocation, setSavingLocation] = useState(false);
+  const [openFormSlot, setOpenFormSlot] = useState(null);
+  const [showLocationForm, setShowLocationForm] = useState(false);
 
   const timeSlots = [
     { id: "MORNING", label: "Morning", time: "8:00 - 12:00", color: "yellow" },
@@ -87,6 +108,20 @@ export function ActivityScheduling() {
     { id: "EVENING", label: "Evening", time: "18:00 - 23:00", color: "purple" },
   ];
 
+  const TIMESLOT_LIMITS = {
+    MORNING: {
+      start: "08:00",
+      end: "12:00",
+    },
+    AFTERNOON: {
+      start: "12:00",
+      end: "18:00",
+    },
+    EVENING: {
+      start: "18:00",
+      end: "23:00",
+    },
+  };
   async function loadSchedulingData() {
     if (!activePlan) {
       setDays([]);
@@ -95,7 +130,6 @@ export function ActivityScheduling() {
     }
 
     try {
-      setLoading(true);
       setError("");
       const [dayResponse, locationResponse] = await Promise.all([
         getTravelPlanDays(activePlan.id),
@@ -107,7 +141,6 @@ export function ActivityScheduling() {
     } catch (fetchError) {
       setError(getApiErrorMessage(fetchError, "Unable to load activity scheduling data."));
     } finally {
-      setLoading(false);
     }
   }
 
@@ -194,6 +227,29 @@ export function ActivityScheduling() {
     setEditingActivityId(activity.id);
     setSubmitError("");
     setActivityForm(toFormState(activity));
+
+    setOpenFormSlot({
+      dayId: activity.dayId,
+      timeslot: activity.timeslot,
+    });
+  };
+
+  const handleOpenForm = (dayId, timeslot) => {
+    const defaultTimes = getDefaultTimeslotRange(timeslot);
+    setEditingActivityId(null);
+    setActivityForm({
+      ...EMPTY_ACTIVITY_FORM,
+      dayId: String(dayId),
+      locationId: locations[0] ? String(locations[0].id) : "",
+      timeslot,
+      startTime: defaultTimes.startTime,
+      endTime: defaultTimes.endTime,
+    });
+
+    setOpenFormSlot({
+      dayId,
+      timeslot,
+    });
   };
 
   const handleDelete = async (activityId) => {
@@ -205,6 +261,7 @@ export function ActivityScheduling() {
       if (editingActivityId === activityId) {
         resetForm();
       }
+      setOpenFormSlot(null);
     } catch (deleteError) {
       setSubmitError(getApiErrorMessage(deleteError, "Unable to remove this activity right now."));
     } finally {
@@ -216,6 +273,57 @@ export function ActivityScheduling() {
     event.preventDefault();
 
     if (!canSubmitActivity) {
+      return;
+    }
+    const slotLimits = TIMESLOT_LIMITS[activityForm.timeslot];
+    const startMinutes = timeToMinutes(activityForm.startTime);
+    const endMinutes = timeToMinutes(activityForm.endTime);
+    const slotStart = timeToMinutes(slotLimits.start);
+    const slotEnd = timeToMinutes(slotLimits.end);
+
+    if (startMinutes >= endMinutes) {
+      setSubmitError("End time cannot be earlier than start time.");
+      return;
+    }
+
+    if (startMinutes < slotStart || endMinutes > slotEnd) {
+      setSubmitError(
+        `${activityForm.timeslot.toLowerCase()} activities must stay between ${slotLimits.start} and ${slotLimits.end}.`
+      );
+      return;
+    }
+    
+    const selectedDay = days.find(
+      (day) => String(day.id) === activityForm.dayId
+    );
+
+    const overlappingActivity = (selectedDay?.activities || []).find(
+      (activity) => {
+        if (
+          editingActivityId &&
+          activity.id === editingActivityId
+        ) {
+          return false;
+        }
+
+        if (activity.timeslot !== activityForm.timeslot) {
+          return false;
+        }
+
+        const existingStart = timeToMinutes(activity.startTime);
+        const existingEnd = timeToMinutes(activity.endTime);
+
+        return (
+          startMinutes < existingEnd &&
+          endMinutes > existingStart
+        );
+      }
+    );
+
+    if (overlappingActivity) {
+      setSubmitError(
+        `This overlaps with "${overlappingActivity.name}".`
+      );
       return;
     }
 
@@ -232,6 +340,7 @@ export function ActivityScheduling() {
 
       await loadSchedulingData();
       resetForm();
+      setOpenFormSlot(null);
     } catch (submitActivityError) {
       setSubmitError(getApiErrorMessage(submitActivityError, "Unable to save this activity right now."));
     } finally {
@@ -239,9 +348,7 @@ export function ActivityScheduling() {
     }
   };
 
-  const handleCreateLocation = async (event) => {
-    event.preventDefault();
-
+  const handleCreateLocation = async () => {
     if (!activePlan?.destinationId) {
       setLocationError("Select a plan with a destination before adding a location.");
       return;
@@ -264,6 +371,7 @@ export function ActivityScheduling() {
         locationId: String(newLocation.id),
       }));
       resetLocationForm();
+      setShowLocationForm(false);
     } catch (createLocationError) {
       setLocationError(getApiErrorMessage(createLocationError, "Unable to add this location right now."));
     } finally {
@@ -272,229 +380,16 @@ export function ActivityScheduling() {
   };
 
   if (!activePlan) return <ModuleEmpty title="No active plan selected" description="Choose a plan to see its generated daily structure and scheduled activities." />;
-  if (loading) return <ModuleLoading label="Loading daily schedule..." />;
+  if (loading && !days.length) {
+    return <ModuleLoading label="Loading daily schedule..." />;
+  }
   if (error) return <ModuleError message={error} />;
   if (!days.length) return <ModuleEmpty title="No day structure available" description="Create a plan first so your trip days can be organized into a schedule." />;
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
-          <div className="bg-white border-2 border-gray-300 rounded-lg p-4 sticky top-6">
-            <h3 className="font-medium mb-3 flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              {editingActivityId ? "Edit Activity" : "Add Activity"}
-            </h3>
-            {submitError ? <div className="mb-4"><ModuleError message={submitError} /></div> : null}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Activity Name</label>
-                <input
-                  type="text"
-                  value={activityForm.name}
-                  onChange={(event) => setActivityForm({ ...activityForm, name: event.target.value })}
-                  placeholder="Enter activity name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Day</label>
-                <select
-                  value={activityForm.dayId}
-                  onChange={(event) => setActivityForm({ ...activityForm, dayId: event.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
-                >
-                  {days.map((day, index) => (
-                    <option key={day.id} value={day.id}>
-                      Day {index + 1} - {new Date(day.date).toLocaleDateString()}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Timeslot</label>
-                <select
-                  value={activityForm.timeslot}
-                  onChange={(event) => handleTimeslotChange(event.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
-                >
-                  {timeSlots.map((slot) => (
-                    <option key={slot.id} value={slot.id}>
-                      {slot.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Location</label>
-                <select
-                  value={activityForm.locationId}
-                  onChange={(event) => setActivityForm({ ...activityForm, locationId: event.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="">Select a location</option>
-                  {locations.map((location) => (
-                    <option key={location.id} value={location.id}>
-                      {location.name} · {location.type}
-                    </option>
-                  ))}
-                </select>
-                {locations.length === 0 ? (
-                  <p className="mt-2 text-xs text-amber-700">
-                    No saved locations yet for this destination. Add one below, then continue with the activity.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Start Time</label>
-                  <input
-                    type="time"
-                    value={activityForm.startTime}
-                    onChange={(event) => setActivityForm({ ...activityForm, startTime: event.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">End Time</label>
-                  <input
-                    type="time"
-                    value={activityForm.endTime}
-                    onChange={(event) => setActivityForm({ ...activityForm, endTime: event.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Duration (min)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={activityForm.duration}
-                    onChange={(event) => setActivityForm({ ...activityForm, duration: event.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Status</label>
-                  <select
-                    value={activityForm.status}
-                    onChange={(event) => setActivityForm({ ...activityForm, status: event.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
-                  >
-                    <option value="PLANNED">Planned</option>
-                    <option value="CONFIRMED">Confirmed</option>
-                    <option value="COMPLETED">Completed</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Notes</label>
-                <textarea
-                  rows={3}
-                  value={activityForm.description}
-                  onChange={(event) => setActivityForm({ ...activityForm, description: event.target.value })}
-                  placeholder="Add context, meeting points, or reminders"
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={submitting || !canSubmitActivity}
-                  className="flex-1 px-4 py-2 bg-blue-500 text-white border-2 border-blue-600 rounded hover:bg-blue-600 disabled:opacity-60"
-                >
-                  {submitting ? "Saving..." : editingActivityId ? "Update Activity" : "Add Activity"}
-                </button>
-                {editingActivityId ? (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-3 py-2 border border-gray-300 rounded hover:bg-gray-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                ) : null}
-              </div>
-            </form>
-
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <h4 className="text-sm font-medium mb-3">Add Location</h4>
-              {locationError ? <div className="mb-3"><ModuleError message={locationError} /></div> : null}
-              <form onSubmit={handleCreateLocation} className="space-y-3">
-                <input
-                  type="text"
-                  value={locationForm.name}
-                  onChange={(event) => setLocationForm({ ...locationForm, name: event.target.value })}
-                  placeholder="Location name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                />
-                <input
-                  type="text"
-                  value={locationForm.address}
-                  onChange={(event) => setLocationForm({ ...locationForm, address: event.target.value })}
-                  placeholder="Address"
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                />
-                <select
-                  value={locationForm.type}
-                  onChange={(event) => setLocationForm({ ...locationForm, type: event.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white focus:outline-none focus:border-blue-500"
-                >
-                  <option value="ATTRACTION">Attraction</option>
-                  <option value="RESTAURANT">Restaurant</option>
-                  <option value="EVENT">Event</option>
-                  <option value="PARK">Park</option>
-                  <option value="MUSEUM">Museum</option>
-                </select>
-                <button
-                  type="submit"
-                  disabled={savingLocation || !locationForm.name.trim() || !locationForm.address.trim()}
-                  className="w-full px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-60"
-                >
-                  {savingLocation ? "Saving location..." : "Save location"}
-                </button>
-              </form>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <h4 className="text-sm font-medium mb-2">Planned Activities</h4>
-              <div className="space-y-2 max-h-72 overflow-y-auto">
-                {unscheduledActivities.length > 0 ? (
-                  unscheduledActivities.map((activity) => (
-                    <button
-                      key={activity.id}
-                      type="button"
-                      onClick={() => handleEdit(activity)}
-                      className={`w-full text-left border rounded p-3 hover:bg-gray-50 ${
-                        editingActivityId === activity.id ? "border-blue-400 bg-blue-50" : "border-gray-300"
-                      }`}
-                    >
-                      <p className="text-sm font-medium">{activity.name}</p>
-                      <p className="text-xs text-gray-600">
-                        {new Date(activity.dayDate).toLocaleDateString()} · {activity.timeslot}
-                      </p>
-                    </button>
-                  ))
-                ) : (
-                  <div className="border-2 border-dashed border-gray-300 rounded p-4 text-sm text-gray-500">
-                    Add the first activity for this plan to start shaping the itinerary.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="lg:col-span-3 space-y-6">
+      <div className="space-y-6">
+        <div className="space-y-6">
           {conflicts.length > 0 ? (
             <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -512,21 +407,21 @@ export function ActivityScheduling() {
           ) : null}
 
           {days.map((day, index) => (
-            <div key={day.id} className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-              <div className="bg-gray-100 border-b border-gray-300 px-6 py-3">
+            <div key={day.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+              <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5">
                 <h2 className="font-medium flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
                   Day {index + 1} - {new Date(day.date).toLocaleDateString()}
                 </h2>
               </div>
 
-              <div className="p-6 space-y-4">
+              <div className="p-4 space-y-3">
                 {timeSlots.map((slot) => {
                   const activities = (day.activities || []).filter((activity) => activity.timeslot === slot.id);
                   const hasConflict = conflicts.some((conflict) => conflict.day === index + 1 && conflict.slot === slot.label.toLowerCase());
 
                   return (
-                    <div key={slot.id} className={`border-2 rounded p-4 ${hasConflict ? "border-yellow-400 bg-yellow-50" : "border-gray-300"}`}>
+                    <div key={slot.id} className={`border rounded-xl p-3 ${hasConflict ? "border-yellow-400 bg-yellow-50" : "border-gray-300"}`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${
@@ -537,40 +432,265 @@ export function ActivityScheduling() {
                         </div>
                         <Clock className="w-4 h-4 text-gray-400" />
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenForm(day.id, slot.id)}
+                        className="w-full mb-3 text-sm px-3 py-2 border border-dashed border-gray-400 rounded-lg hover:bg-gray-50 transition"
+                      >
+                        + Add Activity
+                      </button>
+                      {openFormSlot?.dayId === day.id &&
+                      openFormSlot?.timeslot === slot.id && (
+                        <form
+                          onSubmit={handleSubmit}
+                          className="mb-4 border border-blue-300 bg-white shadow-sm rounded-xl p-4 space-y-3"
+                        >
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>
+                              Day {index + 1} · {slot.label}
+                            </span>
 
-                      {activities.length > 0 ? (
-                        <div className="space-y-2">
-                          {activities.map((activity) => (
-                            <div key={activity.id} className="border border-gray-300 rounded p-3 bg-white flex justify-between items-center gap-4">
-                              <div>
-                                <p className="text-sm font-medium">{activity.name}</p>
-                                <p className="text-xs text-gray-600">{activity.locationName || "Location pending"}</p>
-                                {activity.description ? <p className="text-xs text-gray-500 mt-1">{activity.description}</p> : null}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <div className="text-xs text-gray-500 text-right">
-                                  <p>{activity.duration || 0} min</p>
-                                  <p>{activity.status || "PLANNED"}</p>
+                            <span>{slot.time}</span>
+                          </div>
+                          <input
+                            type="text"
+                            value={activityForm.name}
+                            onChange={(event) =>
+                              setActivityForm({
+                                ...activityForm,
+                                name: event.target.value,
+                              })
+                            }
+                            placeholder="Activity name"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+
+                          <select
+                            value={activityForm.locationId}
+                            onChange={(event) =>
+                              setActivityForm({
+                                ...activityForm,
+                                locationId: event.target.value,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                          >
+                            <option value="">Select location</option>
+
+                            {locations.map((location) => (
+                              <option key={location.id} value={location.id}>
+                                {location.name}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLocationError("");
+                              setShowLocationForm(!showLocationForm);
+                            }}
+                            className="text-sm text-blue-600 hover:text-blue-700 text-left"
+                          >
+                            + Add new location
+                          </button>
+                          {showLocationForm ? (
+                            <div className="border border-gray-200 rounded-xl p-3 space-y-3 bg-gray-50">
+
+                              <input
+                                type="text"
+                                value={locationForm.name}
+                                onChange={(event) =>
+                                  setLocationForm({
+                                    ...locationForm,
+                                    name: event.target.value,
+                                  })
+                                }
+                                placeholder="Location name"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                              />
+
+                              <input
+                                type="text"
+                                value={locationForm.address}
+                                onChange={(event) =>
+                                  setLocationForm({
+                                    ...locationForm,
+                                    address: event.target.value,
+                                  })
+                                }
+                                placeholder="Address"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                              />
+
+                              <select
+                                value={locationForm.type}
+                                onChange={(event) =>
+                                  setLocationForm({
+                                    ...locationForm,
+                                    type: event.target.value,
+                                  })
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                              >
+                                <option value="ATTRACTION">Attraction</option>
+                                <option value="RESTAURANT">Restaurant</option>
+                                <option value="HOTEL">Hotel</option>
+                                <option value="CAFE">Cafe</option>
+                              </select>
+
+                              {locationError ? (
+                                <div className="text-sm text-red-600">
+                                  {locationError}
                                 </div>
+                              ) : null}
+
+                              <div className="flex gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => handleEdit(activity)}
-                                  className="p-2 border border-gray-300 rounded hover:bg-gray-50"
-                                  aria-label={`Edit ${activity.name}`}
+                                  onClick={handleCreateLocation}
+                                  disabled={savingLocation}
+                                  className="px-4 py-2 bg-gray-900 text-white rounded-lg"
                                 >
-                                  <Pencil className="w-4 h-4 text-gray-600" />
+                                  {savingLocation ? "Saving..." : "Save location"}
                                 </button>
+
                                 <button
                                   type="button"
-                                  onClick={() => handleDelete(activity.id)}
-                                  className="p-2 border border-gray-300 rounded hover:bg-red-50"
-                                  aria-label={`Delete ${activity.name}`}
+                                  onClick={() => {
+                                    setShowLocationForm(false);
+                                    resetLocationForm();
+                                  }}
+                                  className="px-4 py-2 border border-gray-300 rounded-lg"
                                 >
-                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                  Cancel
                                 </button>
                               </div>
                             </div>
-                          ))}
+                          ) : null}
+                          <div className="grid grid-cols-2 gap-3">
+                            <input
+                              type="time"
+                              min={TIMESLOT_LIMITS[slot.id].start}
+                              max={TIMESLOT_LIMITS[slot.id].end}
+                              value={activityForm.startTime}
+                              onChange={(event) => {
+                                setSubmitError("");
+                                setActivityForm({
+                                  ...activityForm,
+                                  startTime: event.target.value,
+                                });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+
+                            <input
+                              type="time"
+                              min={TIMESLOT_LIMITS[slot.id].start}
+                              max={TIMESLOT_LIMITS[slot.id].end}
+                              value={activityForm.endTime}
+                              onChange={(event) => {
+                                setSubmitError("");
+
+                                setActivityForm({
+                                  ...activityForm,
+                                  endTime: event.target.value,
+                                });
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <select
+                              value={activityForm.status}
+                              onChange={(event) =>
+                                setActivityForm({
+                                  ...activityForm,
+                                  status: event.target.value,
+                                })
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white"
+                            >
+                              <option value="PLANNED">Planned</option>
+                              <option value="CONFIRMED">Confirmed</option>
+                              <option value="COMPLETED">Completed</option>
+                            </select>
+                          </div>
+                          <textarea
+                            rows={2}
+                            value={activityForm.description}
+                            onChange={(event) =>
+                              setActivityForm({
+                                ...activityForm,
+                                description: event.target.value,
+                              })
+                            }
+                            placeholder="Notes"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                          {submitError ? (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                              {submitError}
+                            </div>
+                          ) : null}
+                          <div className="flex gap-2">
+                            <button
+                              type="submit"
+                              className="px-4 py-2 bg-blue-500 text-white rounded-lg"
+                            >
+                              Save Activity
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setOpenFormSlot(null);
+                                resetForm();
+                              }}
+                              className="px-4 py-2 border border-gray-300 rounded-lg"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                      {activities.length > 0 ? (
+                        <div className="space-y-2">
+                          {activities.map((activity) => {
+                            if (editingActivityId === activity.id) {
+                              return null;
+                            }
+                            return (
+                              <div key={activity.id} className="border border-gray-200 rounded-xl p-3 bg-white shadow-sm hover:border-gray-300 transition flex justify-between items-center gap-4">
+                                <div>
+                                  <p className="text-sm font-medium">{activity.name}</p>
+                                  <p className="text-xs text-gray-600">{activity.locationName || "Location pending"}</p>
+                                  {activity.description ? <p className="text-xs text-gray-500 mt-1">{activity.description}</p> : null}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-xs text-gray-500 text-right">
+                                    <p>{activity.duration || 0} min</p>
+                                    <p>{activity.status || "PLANNED"}</p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEdit(activity)}
+                                    className="p-2 border border-gray-300 rounded hover:bg-gray-50"
+                                    aria-label={`Edit ${activity.name}`}
+                                  >
+                                    <Pencil className="w-4 h-4 text-gray-600" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(activity.id)}
+                                    className="p-2 border border-gray-300 rounded hover:bg-red-50"
+                                    aria-label={`Delete ${activity.name}`}
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       ) : (
                         <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center text-gray-400 text-sm">
