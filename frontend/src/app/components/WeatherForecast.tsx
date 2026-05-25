@@ -10,20 +10,31 @@ export function WeatherForecast() {
   const [forecast, setForecast] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emptyMessage, setEmptyMessage] = useState("");
 
   useEffect(() => {
     async function loadForecast() {
       if (!activePlan) {
         setForecast([]);
+        setEmptyMessage("");
         return;
       }
 
       try {
         setLoading(true);
         setError("");
+        setEmptyMessage("");
         const response = await getWeatherForecast(activePlan.id);
         setForecast(response);
       } catch (fetchError) {
+        if (fetchError?.response?.status === 404) {
+          setForecast([]);
+          setError("");
+          setEmptyMessage(
+            getApiErrorMessage(fetchError, "Forecast details are not available for this plan yet.")
+          );
+          return;
+        }
         setError(getApiErrorMessage(fetchError, "Unable to load weather forecast."));
       } finally {
         setLoading(false);
@@ -49,7 +60,12 @@ export function WeatherForecast() {
   if (loading) return <ModuleLoading label="Loading weather forecast..." />;
   if (error) return <ModuleError message={error} />;
   if (!forecast.length) {
-    return <ModuleEmpty title="No forecast available" description="Forecast details are not available for this plan yet." />;
+    return (
+      <ModuleEmpty
+        title="No forecast available"
+        description={emptyMessage || "Forecast details are not available for this plan yet."}
+      />
+    );
   }
 
   return (

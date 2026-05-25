@@ -2,6 +2,7 @@ package com.travelplanner.planning_service.service;
 
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -22,18 +24,22 @@ import com.travelplanner.planning_service.model.Location;
 import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.LocationRepository;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class WeatherForecastService {
 
     private final LocationRepository locationRepository;
-
-    @Qualifier("directTemplate")
     private final RestTemplate restTemplate;
+
+    public WeatherForecastService(
+            LocationRepository locationRepository,
+            @Qualifier("directTemplate") RestTemplate restTemplate
+    ) {
+        this.locationRepository = locationRepository;
+        this.restTemplate = restTemplate;
+    }
 
     @Value("${weather.api.forecast-url:https://api.open-meteo.com/v1/forecast}")
     private String forecastUrl;
@@ -41,10 +47,15 @@ public class WeatherForecastService {
     @Value("${weather.api.geocoding-url:https://geocoding-api.open-meteo.com/v1/search}")
     private String geocodingUrl;
 
+    @Value("${weather.api.max-forecast-days:16}")
+    private int maxForecastDays;
+
     public List<WeatherForecastResponseDTO> getForecastForPlan(TravelPlan plan, List<LocalDate> dates) {
         if (dates.isEmpty()) {
             return List.of();
         }
+
+        validateForecastRange(dates.get(0), dates.get(dates.size() - 1));
 
         Coordinates coordinates = resolveCoordinates(plan);
         ForecastResponse forecastResponse = fetchForecast(coordinates, dates.get(0), dates.get(dates.size() - 1));
@@ -65,9 +76,29 @@ public class WeatherForecastService {
         return forecast;
     }
 
+    private void validateForecastRange(LocalDate startDate, LocalDate endDate) {
+        LocalDate today = LocalDate.now();
+        LocalDate latestSupportedDate = today.plusDays(Math.max(maxForecastDays - 1L, 0L));
+
+        if (startDate.isAfter(latestSupportedDate)) {
+            throw new ResourceNotFoundException(
+                    "Weather forecast is not available yet for this trip. Forecast data is currently available up to "
+                            + latestSupportedDate + "."
+            );
+        }
+
+        if (endDate.isAfter(latestSupportedDate)) {
+            long availableDays = ChronoUnit.DAYS.between(startDate, latestSupportedDate) + 1;
+            throw new ResourceNotFoundException(
+                    "Weather forecast is only partially available for this trip. Forecast data currently covers the next "
+                            + Math.max(availableDays, 0) + " day(s), up to " + latestSupportedDate + "."
+            );
+        }
+    }
+
     private Coordinates resolveCoordinates(TravelPlan plan) {
         List<Location> locations = locationRepository.findByDestinationId(plan.getDestination().getId()).stream()
-                .filter(location -> location.getLatitude() != null && location.getLongitude() != null)
+                .filter(location -> hasValidCoordinates(location.getLatitude(), location.getLongitude()))
                 .toList();
 
         if (!locations.isEmpty()) {
@@ -79,13 +110,23 @@ public class WeatherForecastService {
         return geocodeDestination(plan.getDestination().getName());
     }
 
+    private boolean hasValidCoordinates(Double latitude, Double longitude) {
+        return latitude != null
+                && longitude != null
+                && latitude >= -90
+                && latitude <= 90
+                && longitude >= -180
+                && longitude <= 180;
+    }
+
     private Coordinates geocodeDestination(String destinationName) {
         URI uri = UriComponentsBuilder.fromHttpUrl(geocodingUrl)
                 .queryParam("name", destinationName)
                 .queryParam("count", 1)
                 .queryParam("language", "en")
                 .queryParam("format", "json")
-                .build(true)
+                .encode()
+                .build()
                 .toUri();
 
         try {
@@ -112,7 +153,8 @@ public class WeatherForecastService {
                 .queryParam("timezone", "auto")
                 .queryParam("start_date", startDate)
                 .queryParam("end_date", endDate)
-                .build(true)
+                .encode()
+                .build()
                 .toUri();
 
         try {
@@ -121,6 +163,14 @@ public class WeatherForecastService {
                 throw new ResourceNotFoundException("Weather provider returned no forecast data");
             }
             return response.getBody();
+        } catch (HttpClientErrorException.BadRequest exception) {
+            if (exception.getResponseBodyAsString().contains("out of allowed range")) {
+                throw new ResourceNotFoundException(
+                        "Weather forecast is not available yet for the selected travel dates."
+                );
+            }
+            log.error("Weather provider rejected forecast request for coordinates {}, {}", coordinates.latitude(), coordinates.longitude(), exception);
+            throw new RuntimeException("Unable to load weather forecast from the external provider", exception);
         } catch (RestClientException exception) {
             log.error("Failed to load weather forecast for coordinates {}, {}", coordinates.latitude(), coordinates.longitude(), exception);
             throw new RuntimeException("Unable to load weather forecast from the external provider", exception);
