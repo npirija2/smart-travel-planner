@@ -2,7 +2,7 @@ package com.travelplanner.planning_service.controller;
 
 import java.util.List;
 import java.util.Map;
-
+import com.travelplanner.planning_service.dto.SaveAttractionRequest;
 import org.apache.coyote.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -15,7 +15,7 @@ import com.travelplanner.planning_service.dto.TravelPlanRequestDTO;
 import com.travelplanner.planning_service.dto.TravelPlanResponseDTO;
 import com.travelplanner.planning_service.model.PlanReservation;
 import com.travelplanner.planning_service.service.TravelPlanService;
-
+import com.travelplanner.planning_service.dto.SaveAttractionRequest;
 import com.travelplanner.planning_service.dto.PlanReservationRequestDTO;
 import com.travelplanner.planning_service.dto.AttractionRecommendationDTO;
 import com.travelplanner.planning_service.dto.DayDetailResponseDTO;
@@ -158,6 +158,35 @@ public class TravelPlanController {
             @RequestHeader("Authorization") String authHeader) {
         return ResponseEntity.ok(planExperienceService.getAttractionRecommendations(planId, interest, authHeader));
     }
+
+    @GetMapping("/{planId}/attractions/saved")
+    public ResponseEntity<List<Long>> getSavedAttractions(
+            @PathVariable Long planId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ResponseEntity.ok(
+                planExperienceService.getSavedAttractionLocationIds(planId, authHeader)
+        );
+    }
+    
+
+    @PostMapping("/{planId}/attractions/save")
+    public ResponseEntity<Void> saveAttraction(
+            @PathVariable Long planId,
+            @RequestBody SaveAttractionRequest request,
+            @RequestHeader("Authorization") String authHeader) {
+        planExperienceService.saveAttraction(planId, request.getLocationId(), authHeader);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{planId}/attractions/save")
+    public ResponseEntity<Void> unsaveAttraction(
+            @PathVariable Long planId,
+            @RequestParam Long locationId,
+            @RequestHeader("Authorization") String authHeader) {
+        planExperienceService.unsaveAttraction(planId, locationId, authHeader);
+        return ResponseEntity.noContent().build();
+    }
+    
 
     @GetMapping("/{planId}/weather")
     public ResponseEntity<List<WeatherForecastResponseDTO>> getWeatherForecast(

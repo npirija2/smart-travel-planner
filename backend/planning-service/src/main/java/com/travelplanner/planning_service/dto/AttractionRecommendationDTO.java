@@ -12,7 +12,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class AttractionRecommendationDTO {
-
+    
     private Long locationId;
     private String name;
     private String address;

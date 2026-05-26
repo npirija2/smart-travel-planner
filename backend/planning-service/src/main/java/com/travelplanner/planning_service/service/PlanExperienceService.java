@@ -1,6 +1,7 @@
 package com.travelplanner.planning_service.service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -8,7 +9,9 @@ import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.travelplanner.planning_service.model.SavedAttraction;
+import com.travelplanner.planning_service.repository.SavedAttractionRepository;
+import org.springframework.transaction.annotation.Transactional;
 import com.travelplanner.planning_service.dto.ActivityResponseDTO;
 import com.travelplanner.planning_service.dto.AttractionRecommendationDTO;
 import com.travelplanner.planning_service.dto.DailyLoadDTO;
@@ -24,10 +27,12 @@ import com.travelplanner.planning_service.exception.ResourceNotFoundException;
 import com.travelplanner.planning_service.model.Activity;
 import com.travelplanner.planning_service.model.Day;
 import com.travelplanner.planning_service.model.Location;
+import com.travelplanner.planning_service.model.SavedAttraction;
 import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.ActivityRepository;
 import com.travelplanner.planning_service.repository.DayRepository;
 import com.travelplanner.planning_service.repository.LocationRepository;
+import com.travelplanner.planning_service.repository.SavedAttractionRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
 import com.travelplanner.shared.security.JwtValidator;
 
@@ -45,6 +50,7 @@ public class PlanExperienceService {
     private final LocationRepository locationRepository;
     private final JwtValidator jwtUtils;
     private final WeatherForecastService weatherForecastService;
+    private final SavedAttractionRepository savedAttractionRepository;
 
     public List<DayDetailResponseDTO> getPlanDays(Long planId, String authHeader) {
         TravelPlan plan = getAuthorizedPlan(planId, authHeader);
@@ -397,5 +403,38 @@ public class PlanExperienceService {
 
     private double safeDouble(Double value) {
         return value == null ? 0.0 : value;
+    }
+
+
+    public List<Long> getSavedAttractionLocationIds(Long planId, String authHeader) {
+       getAuthorizedPlan(planId, authHeader);
+        return savedAttractionRepository.findByPlanId(planId)
+                .stream()
+                .map(SavedAttraction::getLocationId)
+                .toList();
+    }
+
+    @Transactional
+    public void saveAttraction(Long planId, Long locationId, String authHeader) {
+       getAuthorizedPlan(planId, authHeader);
+
+        boolean alreadySaved = savedAttractionRepository.existsByPlanIdAndLocationId(planId, locationId);
+
+        if (!alreadySaved) {
+            SavedAttraction savedAttraction = SavedAttraction.builder()
+                    .planId(planId)
+                    .locationId(locationId)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            savedAttractionRepository.save(savedAttraction);
+        }
+    }
+
+    @Transactional
+    public void unsaveAttraction(Long planId, Long locationId, String authHeader) {
+       getAuthorizedPlan(planId, authHeader);
+
+        savedAttractionRepository.deleteByPlanIdAndLocationId(planId, locationId);
     }
 }

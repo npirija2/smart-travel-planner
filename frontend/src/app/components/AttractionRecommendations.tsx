@@ -1,10 +1,14 @@
 import { MapPin, Star, Clock, Tag, Filter, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getApiErrorMessage } from "../../api/errorUtils";
-import { getAttractions } from "../../api/planService";
 import { usePlanContext } from "../context/PlanContext";
 import { ModuleEmpty, ModuleError, ModuleLoading } from "./ModuleState";
-
+import {
+  getAttractions,
+  getSavedAttractions,
+  saveAttraction,
+  unsaveAttraction,
+} from "../../api/planService";
 export function AttractionRecommendations() {
   const { activePlan } = usePlanContext();
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -12,6 +16,10 @@ export function AttractionRecommendations() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [selectedAttraction, setSelectedAttraction] = useState<any | null>(null);
+  const [savedAttractionIds, setSavedAttractionIds] = useState<number[]>([]);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const categories = [
     { id: "culture", label: "Culture & History", icon: "🏛️" },
     { id: "nature", label: "Nature & Parks", icon: "🌳" },
@@ -32,8 +40,11 @@ export function AttractionRecommendations() {
         setLoading(true);
         setError("");
         const interest = selectedCategories.join(",");
-        const response = await getAttractions(activePlan.id, interest);
-        setAttractions(response);
+    const response = await getAttractions(activePlan.id, interest);
+
+    console.log("Loaded attractions:", response);
+
+    setAttractions(response);
       } catch (fetchError) {
         setError(getApiErrorMessage(fetchError, "Unable to load attraction recommendations."));
       } finally {
@@ -53,9 +64,74 @@ export function AttractionRecommendations() {
   if (!activePlan) {
     return <ModuleEmpty title="No active plan selected" description="Choose a plan first to get destination-aware attraction recommendations." />;
   }
+  const handleViewDetails = (attraction: any) => {
+  setSelectedAttraction(attraction);
+  setErrorMessage("");
+};
 
+  const handleSaveAttraction = async (attraction: any) => {
+  console.log("SAVE CLICKED", attraction);
+  console.log("ACTIVE PLAN", activePlan);
+  console.log("LOCATION ID", getAttractionId(attraction));
+
+  if (!activePlan?.id) {
+    setErrorMessage("No active plan selected.");
+    return;
+  }
+
+  const locationId = getAttractionId(attraction);
+
+  if (!locationId) {
+    setErrorMessage("Unable to save attraction because location ID is missing.");
+    return;
+  }
+
+  try {
+    setErrorMessage("");
+
+    const alreadySaved = savedAttractionIds.includes(locationId);
+
+    if (alreadySaved) {
+      await unsaveAttraction(activePlan.id, locationId);
+
+      setSavedAttractionIds((previousIds) =>
+        previousIds.filter((id) => id !== locationId)
+      );
+
+      setSuccessMessage(`${attraction.name} removed from saved attractions.`);
+    } else {
+      await saveAttraction(activePlan.id, locationId);
+
+      setSavedAttractionIds((previousIds) => [...previousIds, locationId]);
+
+      setSuccessMessage(`${attraction.name} saved successfully.`);
+    }
+  } catch (error) {
+    console.error("Save attraction error:", error);
+    setErrorMessage("Unable to update saved attraction.");
+  }
+};
+
+  const handleAddToItinerary = (attractionName: string) => {
+    setSuccessMessage(`${attractionName} added to itinerary.`);
+    setErrorMessage("");
+  };
+  const getAttractionId = (attraction: any) => {
+    return attraction.locationId;
+  };
   return (
     <div className="max-w-7xl mx-auto">
+              {successMessage && (
+          <div className="mb-4 rounded border border-green-300 bg-green-50 px-4 py-3 text-green-700">
+            {successMessage}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mb-4 rounded border border-red-300 bg-red-50 px-4 py-3 text-red-700">
+            {errorMessage}
+          </div>
+        )}
       <div className="bg-white border-2 border-gray-300 rounded-lg p-6 mb-6">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="w-5 h-5" />
@@ -102,7 +178,7 @@ export function AttractionRecommendations() {
 
       <div className="space-y-4">
         {attractions.map((attraction) => (
-          <div key={attraction.locationId} className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden hover:border-gray-400 transition-colors">
+          <div key={getAttractionId(attraction)} className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden hover:border-gray-400 transition-colors">
             <div className="p-6">
               <div className="flex gap-6">
                 <div className="w-48 h-32 bg-gray-200 border border-gray-300 rounded flex-shrink-0 flex items-center justify-center">
@@ -146,15 +222,24 @@ export function AttractionRecommendations() {
                   <p className="text-sm text-gray-600 mb-3">{attraction.address || "Address unavailable"}</p>
 
                   <div className="flex gap-3">
-                    <button className="px-4 py-2 bg-blue-500 text-white border-2 border-blue-600 rounded hover:bg-blue-600 text-sm">
+                    <button
+                      onClick={() => handleAddToItinerary(attraction.name)}
+                      className="px-4 py-2 bg-blue-500 text-white rounded border border-blue-600 hover:bg-blue-600"
+                    >
                       Add to Itinerary
                     </button>
-                    <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">
+                    <button
+                      onClick={() => handleViewDetails(attraction)}
+                      className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                    >
                       View Details
                     </button>
-                    <button className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm flex items-center gap-1">
+                    <button
+                      onClick={() => handleSaveAttraction(attraction)}
+                      className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 flex items-center gap-2"
+                    >
                       <Heart className="w-4 h-4" />
-                      Save
+                      {savedAttractionIds.includes(getAttractionId(attraction)) ? "Saved" : "Save"}
                     </button>
                   </div>
                 </div>
@@ -163,6 +248,74 @@ export function AttractionRecommendations() {
           </div>
         ))}
       </div>
+      {selectedAttraction && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="w-full max-w-lg rounded-lg border border-gray-300 bg-white p-6 shadow-lg">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-semibold">{selectedAttraction.name}</h2>
+          <p className="text-sm text-gray-600">
+            {selectedAttraction.category || selectedAttraction.categoryName || "Attraction"}
+          </p>
+        </div>
+
+        <button
+          onClick={() => setSelectedAttraction(null)}
+          className="text-gray-500 hover:text-gray-800"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="space-y-3 text-sm text-gray-700">
+        <p>
+          <span className="font-medium">Description: </span>
+          {selectedAttraction.description || "No description available."}
+        </p>
+
+        <p>
+          <span className="font-medium">Location: </span>
+          {selectedAttraction.address ||
+            selectedAttraction.locationName ||
+            selectedAttraction.location ||
+            "Location not available."}
+        </p>
+
+        <p>
+          <span className="font-medium">Destination: </span>
+          {selectedAttraction.destinationName ||
+            selectedAttraction.destination ||
+            "Destination not available."}
+        </p>
+
+        <p>
+          <span className="font-medium">Status: </span>
+          {selectedAttraction.status || "RECOMMENDED"}
+        </p>
+      </div>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          onClick={() => setSelectedAttraction(null)}
+          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+        >
+          Close
+        </button>
+
+        <button
+          onClick={() => {
+            handleAddToItinerary(selectedAttraction.name);
+            setSelectedAttraction(null);
+          }}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          Add to Itinerary
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
