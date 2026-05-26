@@ -29,9 +29,9 @@ export const getTravelPlanDays = async (planId) => {
     return response.data;
 };
 
-export const getRouteOptimization = async (planId) => {
-    const response = await api.get(`/travel-plans/${planId}/route-optimization`);
-    return response.data;
+export const getRouteOptimization = async (travelPlanId) => {
+  const response = await api.get(`/routes/optimize/${travelPlanId}`);
+  return response.data;
 };
 
 export const getScheduleLoad = async (planId) => {
