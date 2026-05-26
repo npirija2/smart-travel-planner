@@ -5,11 +5,42 @@ import { getLocationsByDestination } from "../../api/locationService";
 import { getRouteOptimization } from "../../api/planService";
 import { usePlanContext } from "../context/PlanContext";
 import { ModuleEmpty, ModuleError, ModuleLoading } from "./ModuleState";
+import {MapContainer, TileLayer, Marker, Popup} from "react-leaflet";
+import Routing from "./Routing";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+
+  iconUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+
+  shadowUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+const redIcon = new L.Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+
+  shadowUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 export function RouteOptimization() {
   const { activePlan } = usePlanContext();
   const [locations, setLocations] = useState([]);
   const [routeData, setRouteData] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [startLocation, setStartLocation] = useState("");
+  const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -23,22 +54,93 @@ export function RouteOptimization() {
     try {
       setLoading(true);
       setError("");
+
       const [nextLocations, nextRoute] = await Promise.all([
-        activePlan.destinationId ? getLocationsByDestination(activePlan.destinationId) : Promise.resolve([]),
+        activePlan.destinationId
+          ? getLocationsByDestination(activePlan.destinationId)
+          : Promise.resolve([]),
+
         getRouteOptimization(activePlan.id),
       ]);
+
       setLocations(nextLocations);
       setRouteData(nextRoute);
+
     } catch (fetchError) {
-      setError(getApiErrorMessage(fetchError, "Unable to calculate route optimization."));
+
+      setError(
+        getApiErrorMessage(
+          fetchError,
+          "Unable to calculate route optimization."
+        )
+      );
+
     } finally {
       setLoading(false);
     }
-  };
+    };
+  
+    const handleSetStartLocation = async () => {
+      if (!startLocation.trim()) return;
+
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            startLocation
+          )}`
+        );
+
+        const data = await response.json();
+
+        if (!data.length) {
+          alert("Location not found");
+          return;
+        }
+
+        setCurrentLocation({
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon),
+        });
+
+      } catch (error) {
+        console.error(error);
+      }
+    };
 
   useEffect(() => {
     loadRouteData();
   }, [activePlan?.id]);
+
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+
+      if (startLocation.trim().length < 2) {
+        setSuggestions([]);
+        return;
+      }
+
+      try {
+
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            startLocation
+          )}&limit=5`
+        );
+
+        const data = await response.json();
+
+        setSuggestions(data);
+
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    const timeout = setTimeout(fetchSuggestions, 300);
+
+    return () => clearTimeout(timeout);
+
+  }, [startLocation]);
 
   if (!activePlan) {
     return (
@@ -65,7 +167,56 @@ export function RouteOptimization() {
             <MapPin className="w-5 h-5" />
             Destination Locations
           </h2>
+          <div className="relative mb-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Enter starting location"
+                value={startLocation}
+                onChange={(e) =>
+                  setStartLocation(e.target.value)
+                }
+                className="flex-1 px-3 py-2 border border-gray-300 rounded"
+              />
 
+              <button
+                onClick={handleSetStartLocation}
+                className="px-4 py-2 bg-blue-500 text-white rounded"
+              >
+                Set Start
+              </button>
+            </div>
+
+            {suggestions.length > 0 && (
+              <div className="absolute z-50 w-full bg-white border border-gray-300 rounded mt-1 shadow-lg max-h-60 overflow-auto">
+
+                {suggestions.map((suggestion, index) => (
+
+                  <button
+                    key={index}
+
+                    onClick={() => {
+
+                      setStartLocation(
+                        suggestion.display_name
+                      );
+
+                      setCurrentLocation({
+                        latitude: parseFloat(suggestion.lat),
+                        longitude: parseFloat(suggestion.lon),
+                      });
+
+                      setSuggestions([]);
+                    }}
+
+                    className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 text-sm"
+                  >
+                    {suggestion.display_name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {locations.length === 0 ? (
             <ModuleEmpty
               title="No mapped locations"
@@ -114,21 +265,70 @@ export function RouteOptimization() {
               Optimized Route Map
             </h2>
 
-            <div className="border-2 border-gray-300 rounded bg-gray-50 h-80 flex items-center justify-center relative overflow-hidden">
-              <div className="absolute inset-0 p-4">
-                <div
-                  className="w-full h-full"
-                  style={{
-                    backgroundImage:
-                      "linear-gradient(#ddd 1px, transparent 1px), linear-gradient(90deg, #ddd 1px, transparent 1px)",
-                    backgroundSize: "20px 20px",
-                  }}
+            <div className="border-2 border-gray-300 rounded overflow-hidden">
+              <MapContainer
+                center={
+                  currentLocation
+                    ? [
+                        currentLocation.latitude,
+                        currentLocation.longitude,
+                      ]
+                    : [48.8584, 2.2945]
+                }
+                zoom={12}
+                className="h-80 w-full"
+              >
+                <TileLayer
+                  attribution="&copy; OpenStreetMap contributors"
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-              </div>
-              <div className="relative z-10 text-gray-500 text-sm flex flex-col items-center gap-2">
-                <MapPin className="w-8 h-8" />
-                <span>{routeData?.destinationName || activePlan.destinationName}</span>
-              </div>
+
+                {currentLocation && (
+                  <Marker
+                    icon={redIcon}
+                    position={[
+                      currentLocation.latitude,
+                      currentLocation.longitude,
+                    ]}
+                  >
+                    <Popup>
+                      Your current location
+                    </Popup>
+                  </Marker>
+                )}
+
+                {routeData?.stops?.map((stop: any, index: number) => (
+                  <Marker
+                    key={`${stop.locationId}-${index}`}
+                    position={[
+                      stop.latitude,
+                      stop.longitude,
+                    ]}
+                  >
+                    <Popup>
+                      <div>
+                        <p className="font-semibold">
+                          {stop.locationName}
+                        </p>
+
+                        <p>
+                          {stop.activityName}
+                        </p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                ))}
+
+                {currentLocation && (
+                  <Routing
+                    stops={[
+                      currentLocation,
+                      ...(routeData?.stops || []),
+                    ]}
+                  />
+                )}
+              </MapContainer>
+            </div>
             </div>
 
             <div className="grid grid-cols-3 gap-3 mt-4">
@@ -190,6 +390,5 @@ export function RouteOptimization() {
           </div>
         </div>
       </div>
-    </div>
   );
 }
