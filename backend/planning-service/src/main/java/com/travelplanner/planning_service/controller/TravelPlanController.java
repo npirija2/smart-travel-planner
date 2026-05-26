@@ -17,6 +17,8 @@ import com.travelplanner.planning_service.model.PlanReservation;
 import com.travelplanner.planning_service.service.TravelPlanService;
 import com.travelplanner.planning_service.dto.SaveAttractionRequest;
 import com.travelplanner.planning_service.dto.PlanReservationRequestDTO;
+import com.travelplanner.planning_service.dto.ActivityResponseDTO;
+import com.travelplanner.planning_service.dto.AddAttractionToItineraryRequest;
 import com.travelplanner.planning_service.dto.AttractionRecommendationDTO;
 import com.travelplanner.planning_service.dto.DayDetailResponseDTO;
 import com.travelplanner.planning_service.dto.LocalRecommendationDTO;
@@ -187,7 +189,23 @@ public class TravelPlanController {
         return ResponseEntity.noContent().build();
     }
     
+   @PostMapping("/{planId}/attractions/itinerary")
+    public ResponseEntity<Void> addAttractionToItinerary(
+            @PathVariable Long planId,
+            @RequestBody AddAttractionToItineraryRequest request,
+            @RequestHeader("Authorization") String authHeader) {
 
+        planExperienceService.addAttractionToItinerary(
+                planId,
+                request.getLocationId(),
+                request.getDayId(),
+                authHeader
+        );
+
+        return ResponseEntity.ok().build();
+    }
+
+    
     @GetMapping("/{planId}/weather")
     public ResponseEntity<List<WeatherForecastResponseDTO>> getWeatherForecast(
             @PathVariable Long planId,

@@ -8,6 +8,8 @@ import {
   getSavedAttractions,
   saveAttraction,
   unsaveAttraction,
+  addAttractionToItinerary,
+  getPlanDays,
 } from "../../api/planService";
 export function AttractionRecommendations() {
   const { activePlan } = usePlanContext();
@@ -15,7 +17,10 @@ export function AttractionRecommendations() {
   const [attractions, setAttractions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
+  const [days, setDays] = useState<any[]>([]);
+  const [selectedItineraryAttraction, setSelectedItineraryAttraction] = useState<any | null>(null);
+  const [selectedDayId, setSelectedDayId] = useState<number | "">("");
+  const [addedAttractionIds, setAddedAttractionIds] = useState<number[]>([]);
   const [selectedAttraction, setSelectedAttraction] = useState<any | null>(null);
   const [savedAttractionIds, setSavedAttractionIds] = useState<number[]>([]);
   const [successMessage, setSuccessMessage] = useState("");
@@ -28,6 +33,23 @@ export function AttractionRecommendations() {
     { id: "shopping", label: "Shopping", icon: "🛍️" },
     { id: "nightlife", label: "Nightlife", icon: "🌃" },
   ];
+
+  useEffect(() => {
+    const loadDays = async () => {
+      if (!activePlan?.id) return;
+
+      try {
+        const response = await getPlanDays(activePlan.id);
+        console.log("Loaded plan days:", response);
+        setDays(response);
+      } catch (error) {
+        console.error("Unable to load plan days:", error);
+        setErrorMessage("Unable to load plan days.");
+      }
+    };
+
+    loadDays();
+  }, [activePlan?.id]);
 
   useEffect(() => {
     async function loadAttractions() {
@@ -112,13 +134,58 @@ export function AttractionRecommendations() {
   }
 };
 
-  const handleAddToItinerary = (attractionName: string) => {
+const handleAddToItinerary = (attractionName: string) => {
     setSuccessMessage(`${attractionName} added to itinerary.`);
     setErrorMessage("");
   };
   const getAttractionId = (attraction: any) => {
     return attraction.locationId;
   };
+
+  const handleConfirmAddToItinerary = async () => {
+  if (!activePlan?.id) {
+    setErrorMessage("No active plan selected.");
+    return;
+  }
+
+  if (!selectedItineraryAttraction) {
+    setErrorMessage("No attraction selected.");
+    return;
+  }
+
+  if (!selectedDayId) {
+    setErrorMessage("Please select a day.");
+    return;
+  }
+
+  const locationId = getAttractionId(selectedItineraryAttraction);
+
+  if (!locationId) {
+    setErrorMessage("Unable to add attraction because location ID is missing.");
+    return;
+  }
+
+  try {
+    setErrorMessage("");
+
+    await addAttractionToItinerary(
+      activePlan.id,
+      locationId,
+      Number(selectedDayId)
+    );
+
+    setAddedAttractionIds((previousIds) => [...previousIds, locationId]);
+
+    setSuccessMessage(`${selectedItineraryAttraction.name} added to itinerary.`);
+    setSelectedItineraryAttraction(null);
+    setSelectedDayId("");
+  } catch (error) {
+    console.error("Add to itinerary error:", error);
+    setErrorMessage("Unable to add attraction to itinerary.");
+  }
+};
+
+
   return (
     <div className="max-w-7xl mx-auto">
               {successMessage && (
@@ -223,10 +290,16 @@ export function AttractionRecommendations() {
 
                   <div className="flex gap-3">
                     <button
-                      onClick={() => handleAddToItinerary(attraction.name)}
-                      className="px-4 py-2 bg-blue-500 text-white rounded border border-blue-600 hover:bg-blue-600"
+                      onClick={() => {
+                        setSelectedItineraryAttraction(attraction);
+                        setSelectedDayId("");
+                      }}
+                      disabled={addedAttractionIds.includes(getAttractionId(attraction))}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                     >
-                      Add to Itinerary
+                      {addedAttractionIds.includes(getAttractionId(attraction))
+                        ? "Added"
+                        : "Add to Itinerary"}
                     </button>
                     <button
                       onClick={() => handleViewDetails(attraction)}
@@ -315,7 +388,64 @@ export function AttractionRecommendations() {
     </div>
   </div>
 )}
+    {selectedItineraryAttraction && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+    <div className="w-full max-w-md rounded-lg border border-gray-300 bg-white p-6 shadow-lg">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">Add to Itinerary</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          Choose a day for {selectedItineraryAttraction.name}.
+        </p>
+      </div>
 
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Day
+      </label>
+
+      <select
+        value={selectedDayId}
+        onChange={(event) => setSelectedDayId(Number(event.target.value))}
+        className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
+      >
+        <option value="">Select day</option>
+
+        {days.map((day, index) => (
+          <option key={day.id} value={day.id}>
+            {day.date
+              ? `Day ${index + 1} - ${day.date}`
+              : `Day ${index + 1}`}
+          </option>
+        ))}
+      </select>
+
+      {days.length === 0 && (
+        <p className="mb-4 text-sm text-red-600">
+          No days found for this plan.
+        </p>
+      )}
+
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => {
+            setSelectedItineraryAttraction(null);
+            setSelectedDayId("");
+          }}
+          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handleConfirmAddToItinerary}
+          disabled={!selectedDayId || days.length === 0}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

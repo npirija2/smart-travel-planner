@@ -37,6 +37,7 @@ import com.travelplanner.planning_service.repository.TravelPlanRepository;
 import com.travelplanner.shared.security.JwtValidator;
 
 import io.jsonwebtoken.Claims;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -436,5 +437,40 @@ public class PlanExperienceService {
        getAuthorizedPlan(planId, authHeader);
 
         savedAttractionRepository.deleteByPlanIdAndLocationId(planId, locationId);
+    }
+
+
+
+    @Transactional
+    public void addAttractionToItinerary(
+            Long planId,
+            Long locationId,
+            Long dayId,
+            String authHeader
+    ) {
+        TravelPlan plan = getAuthorizedPlan(planId, authHeader);
+
+        Location location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new EntityNotFoundException("Location not found"));
+
+        Day day = dayRepository.findById(dayId)
+                .orElseThrow(() -> new EntityNotFoundException("Day not found"));
+
+        if (!day.getTravelPlan().getId().equals(planId)) {
+            throw new IllegalArgumentException("Selected day does not belong to this travel plan");
+        }
+
+        Activity activity = Activity.builder()
+                .name(location.getName())
+                .description("Attraction added from recommendations.")
+                .day(day)
+                .createdBy(plan.getOwnerId())
+                .location(location)
+                .timeslot("MORNING")
+                .duration(120)
+                .status("PLANNED")
+                .build();
+
+        activityRepository.save(activity);
     }
 }
