@@ -1,13 +1,10 @@
 FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
-COPY backend/shared/ ./backend/shared/
+COPY eureka-server/pom.xml /app/eureka-server/
+COPY eureka-server/src /app/eureka-server/src
 
-RUN mvn -f backend/shared/pom.xml clean install -DskipTests
-
-COPY backend/eureka-server/ ./backend/eureka-server/
-
-RUN mvn -f backend/eureka-server/pom.xml clean package -DskipTests
+RUN cd /app/eureka-server && mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
@@ -15,9 +12,10 @@ WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
-COPY --from=build /app/backend/eureka-server/target/*.jar app.jar
-
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss256k"
+COPY --from=build /app/eureka-server/target/*.jar app.jar
 
 EXPOSE 8761
+
+ENV JAVA_OPTS="-XX:TieredStopAtLevel=1 -Xss256k -XX:+UseSerialGC -Dspring.profiles.active=docker"
+
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

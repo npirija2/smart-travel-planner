@@ -1,13 +1,13 @@
 FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 
-COPY backend/shared/ ./backend/shared/
+COPY shared /app/shared
+RUN cd /app/shared && mvn clean install -DskipTests
 
-RUN mvn -f backend/shared/pom.xml clean install -DskipTests
+COPY user-service/pom.xml /app/user-service/
+COPY user-service/src /app/user-service/src
 
-COPY backend/user-service/ ./backend/user-service/
-
-RUN mvn -f backend/user-service/pom.xml clean package -DskipTests
+RUN cd /app/user-service && mvn clean package -DskipTests
 
 FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
@@ -15,9 +15,10 @@ WORKDIR /app
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 
-COPY --from=build /app/backend/user-service/target/*.jar app.jar
-
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Xss256k"
+COPY --from=build /app/user-service/target/*.jar app.jar
 
 EXPOSE 8081
+
+ENV JAVA_OPTS="-XX:TieredStopAtLevel=1 -Xss256k -XX:+UseSerialGC -Dspring.profiles.active=docker"
+
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
