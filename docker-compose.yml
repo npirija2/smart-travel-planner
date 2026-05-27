@@ -1,3 +1,4 @@
+version: '3.8'
 
 networks:
   travel-network:
@@ -52,7 +53,6 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
     networks:
       - travel-network
-
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "8761"]
       interval: 5s
@@ -68,6 +68,7 @@ services:
       - "8080:8080"
     environment:
       - SERVER_PORT=8080
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
     networks:
@@ -88,6 +89,7 @@ services:
       - DB_URL=jdbc:postgresql://postgres-db:5432/travel_planner_db
       - DB_USERNAME=travel_user
       - DB_PASSWORD=travel_password
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
     networks:
@@ -111,6 +113,7 @@ services:
       - DB_USERNAME=travel_user
       - DB_PASSWORD=travel_password
       - SPRING_RABBITMQ_HOST=rabbitmq
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
     networks:
@@ -135,6 +138,7 @@ services:
       - DB_URL=jdbc:postgresql://postgres-db:5432/travel_planner_db
       - DB_USERNAME=travel_user
       - DB_PASSWORD=travel_password
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
     networks:
@@ -158,8 +162,14 @@ services:
       - DB_USERNAME=travel_user
       - DB_PASSWORD=travel_password
       - SPRING_RABBITMQ_HOST=rabbitmq
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - EUREKA_CLIENT_SERVICE-URL_DEFAULTZONE=http://eureka-server:8761/eureka/
       - SPRING_PROFILES_ACTIVE=docker
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB=DEBUG
+      - LOGGING_LEVEL_COM_TRAVELPLANNER=DEBUG
+      - LOGGING_LEVEL_ORG_HIBERNATE_SQL=DEBUG
+    extra_hosts:
+      - "localhost:host-gateway"
     networks:
       - travel-network
     depends_on:
@@ -182,7 +192,8 @@ services:
     networks:
       - travel-network
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_started
 
 volumes:
   pgdata:
