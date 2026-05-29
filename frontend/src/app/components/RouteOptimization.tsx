@@ -7,6 +7,8 @@ import { ModuleEmpty, ModuleError, ModuleLoading } from "./ModuleState";
 import {MapContainer, TileLayer, Marker, Popup, Polyline, ZoomControl} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
+console.log("KEY:", ORS_API_KEY);
 const redMarker = new L.Icon({
   iconUrl:
     "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
@@ -147,38 +149,43 @@ export function RouteOptimization() {
       }
 
       try {
-        const allPoints = [
-          currentLocation,
-          ...stopsForSelectedDay,
-        ];
+        let remaining = [...stopsForSelectedDay];
+        let optimized = [];
 
-        const coordinates = allPoints
-          .map(
-            (p: any) =>
-              `${p.longitude},${p.latitude}`
-          )
-          .join(";");
+        let current = currentLocation;
 
-        const response = await fetch(
-          `https://router.project-osrm.org/trip/v1/${transportMode}/${coordinates}?source=first&roundtrip=false`
-        );
+        while (remaining.length > 0) {
 
-        const data = await response.json();
+          let nearestIndex = 0;
+          let nearestDistance = Number.MAX_VALUE;
 
-        if (!data.trips?.length) return;
+          remaining.forEach((stop, index) => {
 
-        const waypointOrder =
-          data.waypoints
-            .slice(1)
-            .map((w: any) => w.waypoint_index - 1);
+            const dist = Math.sqrt(
+              Math.pow(stop.latitude - current.latitude, 2) +
+              Math.pow(stop.longitude - current.longitude, 2)
+            );
 
-        const reordered =
-          waypointOrder.map(
-            (index: number) =>
-              stopsForSelectedDay[index]
-          );
+            if (dist < nearestDistance) {
+              nearestDistance = dist;
+              nearestIndex = index;
+            }
+          });
 
-        setOptimizedStopsState(reordered);
+  const nextStop = remaining.splice(
+    nearestIndex,
+    1
+  )[0];
+
+  optimized.push(nextStop);
+
+  current = {
+    latitude: nextStop.latitude,
+    longitude: nextStop.longitude,
+  };
+}
+
+setOptimizedStopsState(optimized);
 
       } catch (err) {
         console.error(err);
@@ -188,8 +195,9 @@ export function RouteOptimization() {
     optimizeRoute();
   }, [
     currentLocation,
-    stopsForSelectedDay,
+    selectedDay,
     transportMode,
+    routeData,
   ]);
 
   const loadRouteData = async () => {
@@ -206,10 +214,21 @@ export function RouteOptimization() {
      setRouteData(nextRoute);
 
       if (nextRoute?.stops?.length) {
-        const firstDay = nextRoute.stops[0].dayDate
-          ? new Date(nextRoute.stops[0].dayDate).toLocaleDateString()
-          : "Date pending";
-        setSelectedDay(firstDay);
+        const sortedDates = [
+          ...new Set(
+            nextRoute.stops
+              .map((s: any) => s.dayDate)
+              .filter(Boolean)
+          ),
+        ].sort(
+          (a: any, b: any) =>
+            new Date(a).getTime() -
+            new Date(b).getTime()
+        );
+
+        setSelectedDay(
+          new Date(sortedDates[0] as string).toLocaleDateString()
+        );
       }
 
     } catch (fetchError) {
@@ -256,11 +275,36 @@ export function RouteOptimization() {
           .map((p) => `${p[1]},${p[0]}`)
           .join(";");
 
-        const response = await fetch(`https://router.project-osrm.org/route/v1/${transportMode}/${coordinates}?overview=full&geometries=geojson&steps=true`);
-        const data = await response.json();
+        const orsProfile =
+          transportMode === "driving"
+            ? "driving-car"
+            : transportMode === "walking"
+            ? "foot-walking"
+            : "cycling-regular";
+console.log("KEY", ORS_API_KEY);
+console.log("POINTS", points);
 
+const response = await fetch(
+  `https://api.openrouteservice.org/v2/directions/${orsProfile}/geojson`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: ORS_API_KEY,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              coordinates: points.map((p) => [
+                p[1],
+                p[0],
+              ]),
+            }),
+          }
+        );
+
+        const data = await response.json();
+        console.log("ORS RESPONSE", data);
         const geometry =
-          data.routes?.[0]?.geometry?.coordinates?.map(
+          data.features?.[0]?.geometry?.coordinates?.map(
             (coord: number[]) => [
               coord[1],
               coord[0],
@@ -268,13 +312,23 @@ export function RouteOptimization() {
           ) || [];
 
         setRouteGeometry(geometry);
-        setRouteLegs(data.routes?.[0]?.legs || []);
-        setRouteDistanceKm(data.routes?.[0]?.distance ? data.routes[0].distance / 1000 : 0);
+
+        const summary = data.features?.[0]?.properties?.summary;
+        const segments = data.features?.[0]?.properties?.segments || [];
+        console.log("SEGMENTS", segments);
+        setRouteLegs(segments);
+          console.log("SUMMARY", summary);
+          console.log(
+            "FIRST COORD",
+            data.features?.[0]?.geometry?.coordinates?.[0]
+          );
+        setRouteDistanceKm(
+          (summary?.distance || 0) / 1000
+        );
+
         if (!showOptimizedRoute) {
           setOriginalRouteKm(
-            data.routes?.[0]?.distance
-              ? data.routes[0].distance / 1000
-              : 0
+            (summary?.distance || 0) / 1000
           );
         }
       } catch (err) {
@@ -336,9 +390,8 @@ export function RouteOptimization() {
   if (error) {
     return <ModuleError message={error} />;
   }
-  const routeWarning =
-    routeDistanceKm > 25 &&
-    stopsForSelectedDay.length >= 4;
+  const routeCalculated = !!currentLocation && routeDistanceKm > 0;
+  const routeWarning = routeCalculated && routeDistanceKm > 25 && stopsForSelectedDay.length >= 4;
 
   const originalRoutePoints = [
     ...(currentLocation
@@ -402,6 +455,11 @@ export function RouteOptimization() {
           <div className="border-t border-gray-300 pt-4 space-y-3">
             <div className="relative">
               <label className="block text-sm font-medium mb-1">Starting location</label>
+              {!currentLocation && (
+                <div className="mb-2 px-2 py-1 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700">
+                  Enter a starting location to generate a route.
+                </div>
+              )}
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -475,23 +533,24 @@ export function RouteOptimization() {
                   <h3 className="font-medium text-sm">
                     Daily Route
                   </h3>
-
-                  <span
-                    className={`text-xs font-medium px-2 py-1 rounded-full ${
-                      routeWarning
-                        ? "bg-orange-100 text-orange-700"
-                        : "bg-green-100 text-green-700"
-                    }`}
-                  >
-                    {routeWarning ? "Needs optimization" : "Efficient"}
-                  </span>
+                    {currentLocation && (
+                      <span
+                        className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          routeWarning
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {routeWarning ? "Needs optimization" : "Efficient"}
+                      </span>
+                    )}
                 </div>
 
                 <div className="space-y-2">
 
                   {currentLocation && (
-                    <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded p-3">
-                      <div className="w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center font-medium">
+                    <div className="flex items-start gap-3 bg-purple-50 border border-purple-200 rounded p-3">
+                      <div className="w-6 h-6 rounded-full bg-purple-500 text-white text-xs flex items-center justify-center font-medium">
                         S
                       </div>
 
@@ -539,21 +598,16 @@ export function RouteOptimization() {
                           </p>
                         )}
                       </div>
-                      {(
-                        currentLocation || idx > 0
-                      ) && (
+                      {currentLocation && (
                         <div className="ml-3 flex items-center gap-2 text-xs text-gray-500 py-1">
                           <div className="h-5 border-l border-dashed border-gray-300" />
 
                           {routeLegs[idx] && (
-                            <div className="ml-3 flex items-center gap-2 text-xs text-gray-500 py-1">
-                              <div className="h-5 border-l border-dashed border-gray-300" />
-
-                              <span>
-                                ~{Math.round(routeLegs[idx].duration / 60)} min
-                                • {(routeLegs[idx].distance / 1000).toFixed(1)} km
-                              </span>
-                            </div>
+                            <span>
+                              ~{Math.round(routeLegs[idx].duration / 60)} min
+                              {" • "}
+                              {(routeLegs[idx].distance / 1000).toFixed(1)} km
+                            </span>
                           )}
                         </div>
                       )}
@@ -562,7 +616,7 @@ export function RouteOptimization() {
                 </div>
               </div>
 
-              {routeWarning && (
+              {currentLocation && routeWarning && (
                 <div className="border border-orange-300 bg-orange-50 rounded-lg p-4">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
@@ -606,10 +660,11 @@ export function RouteOptimization() {
               <MapPin className="w-5 h-5" />
               Route Map
               {selectedDay && (
-                <span className="text-sm font-normal text-gray-500 ml-1">— {selectedDay}</span>
+                <span className="text-sm font-normal text-gray-500 ml-1">
+                  — {selectedDay}
+                </span>
               )}
             </h2>
-
             <div className="border-2 border-gray-300 rounded overflow-hidden">
               <MapContainer
                 center={
@@ -630,7 +685,7 @@ export function RouteOptimization() {
                 />
                 <ZoomControl position="topleft" />
                 {currentLocation && (
-                  <Marker position={[currentLocation.latitude, currentLocation.longitude]}icon={createNumberedIcon(1, "#dc2626")}>
+                  <Marker position={[currentLocation.latitude, currentLocation.longitude]}icon={createNumberedIcon(1, "#7c3aed")}>
                     <Popup>Starting location</Popup>
                   </Marker>
                 )}
@@ -652,7 +707,9 @@ export function RouteOptimization() {
                       ) as any
                     }
                   icon={createNumberedIcon(
-                    index + 2,
+                    currentLocation
+                      ? index + 2
+                      : index + 1,
                     showOptimizedRoute ? "#22c55e" : "#ef4444"
                   )}
                   >
@@ -662,22 +719,21 @@ export function RouteOptimization() {
                     </Popup>
                   </Marker>
                 ))}
-                <Polyline
-                  positions={routeGeometry as any}
-                  pathOptions={{
-                    color: showOptimizedRoute
-                      ? "#16a34a"
-                      : "#ef4444",
-
-                    weight: showOptimizedRoute ? 6 : 4,
-
-                    dashArray: showOptimizedRoute
-                      ? undefined
-                      : "8 8",
-
-                    opacity: 0.9,
-                  }}
-                />
+                {currentLocation && routeGeometry.length > 0 && (
+                  <Polyline
+                    positions={routeGeometry as any}
+                    pathOptions={{
+                      color: showOptimizedRoute
+                        ? "#16a34a"
+                        : "#ef4444",
+                      weight: showOptimizedRoute ? 6 : 4,
+                      dashArray: showOptimizedRoute
+                        ? undefined
+                        : "8 8",
+                      opacity: 0.9,
+                    }}
+                  />
+                )}
               </MapContainer>
             </div>
 
@@ -695,53 +751,73 @@ export function RouteOptimization() {
 
               <div className="border border-gray-300 rounded p-3 text-center">
                 <p className="text-2xl font-medium">
-                  {routeDistanceKm.toFixed(1)} km
+                  {currentLocation
+                    ? `${routeDistanceKm.toFixed(1)} km`
+                    : "-"}
                 </p>
 
                 <p className="text-xs text-gray-600">
                   Total km
                 </p>
-                {showOptimizedRoute && (
-                  <p className="text-xs text-green-600 mt-1">
-                    Optimized route applied
-                  </p>
-                )}
-                {showOptimizedRoute && (
-                  <p className="text-xs text-green-600">
-                    Saved{" "}
-                    {(originalRouteKm - routeDistanceKm).toFixed(1)}
-                    {" "}km
-                  </p>
-                )}
               </div>
 
-              <div
-                className={`border rounded p-3 text-center ${
-                  routeWarning
-                    ? "border-orange-300 bg-orange-50"
-                    : "border-green-300 bg-green-50"
-                }`}
-              >
-                <p
-                  className={`text-2xl font-medium ${
-                    routeWarning
-                      ? "text-orange-700"
-                      : "text-green-700"
+              {currentLocation ? (
+                <div
+                  className={`border rounded p-3 text-center ${
+                    showOptimizedRoute
+                      ? "border-green-300 bg-green-50"
+                      : routeWarning
+                      ? "border-orange-300 bg-orange-50"
+                      : "border-green-300 bg-green-50"
                   }`}
                 >
-                  {routeWarning ? "!" : "✓"}
-                </p>
+                  {showOptimizedRoute ? (
+                    <>
+                      <p className="text-xs text-green-700 font-medium">
+                        Optimized route applied
+                      </p>
 
-                <p
-                  className={`text-xs ${
-                    routeWarning
-                      ? "text-orange-700"
-                      : "text-green-700"
-                  }`}
-                >
-                  {routeWarning ? "Needs optimization" : "Efficient"}
-                </p>
-              </div>
+                      <p className="text-xs text-green-600 mt-2">
+                        Saved{" "}
+                        {(originalRouteKm - routeDistanceKm).toFixed(1)}
+                        {" "}km
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p
+                        className={`text-2xl font-medium ${
+                          routeWarning
+                            ? "text-orange-700"
+                            : "text-green-700"
+                        }`}
+                      >
+                        {routeWarning ? "!" : "✓"}
+                      </p>
+
+                      <p
+                        className={`text-xs ${
+                          routeWarning
+                            ? "text-orange-700"
+                            : "text-green-700"
+                        }`}
+                      >
+                        {routeWarning
+                          ? "Needs optimization"
+                          : "Efficient"}
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="border border-gray-300 rounded p-3 text-center">
+                  <p className="text-2xl text-gray-400">-</p>
+
+                  <p className="text-xs text-gray-500">
+                    Not calculated
+                  </p>
+                </div>
+              )}
 
             </div>
           </div>
@@ -751,4 +827,3 @@ export function RouteOptimization() {
     </div>
   );
 }
-
