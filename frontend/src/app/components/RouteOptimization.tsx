@@ -1,28 +1,14 @@
 import { MapPin, AlertTriangle, Calendar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getApiErrorMessage } from "../../api/errorUtils";
-import { getRouteOptimization } from "../../api/planService";
+import { getRouteOptimization, getRouteGeometry} from "../../api/planService";
 import { usePlanContext } from "../context/PlanContext";
 import { ModuleEmpty, ModuleError, ModuleLoading } from "./ModuleState";
 import {MapContainer, TileLayer, Marker, Popup, Polyline, ZoomControl} from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
-console.log("KEY:", ORS_API_KEY);
-const redMarker = new L.Icon({
-  iconUrl:
-    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
 
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-function createNumberedIcon(
-  number: number,
-  color: string
-) {
+function createNumberedIcon(number: number, color: string){
   return L.divIcon({
     className: "",
     html: `
@@ -47,43 +33,15 @@ function createNumberedIcon(
   });
 }
 
-function assignTimeslotByOrder(index: number, total: number) {
-  const percentage = index / total;
-
-  if (percentage < 0.34) return "MORNING";
-  if (percentage < 0.67) return "AFTERNOON";
-
-  return "EVENING";
-}
-
-function offsetCoordinates(
-  lat: number,
-  lng: number,
-  index: number,
-  stops: any[]
-) {
+function offsetCoordinates(lat: number, lng: number, index: number, stops: any[]) {
   const duplicatesBefore = stops.slice(0, index).filter(
     (s: any) =>
       s.latitude === stops[index].latitude &&
       s.longitude === stops[index].longitude
   ).length;
-
   const offset = duplicatesBefore * 0.005;
-
-  return [
-    lat + offset,
-    lng + offset,
-  ];
+  return [lat + offset, lng + offset,];
 }
-const TIMESLOT_LABELS: Record<string, { label: string; icon: string }> = {
-  MORNING: { label: "Morning", icon: "🌅" },
-  morning: { label: "Morning", icon: "🌅" },
-  AFTERNOON: { label: "Afternoon", icon: "☀️" },
-  afternoon: { label: "Afternoon", icon: "☀️" },
-  EVENING: { label: "Evening", icon: "🌙" },
-  evening: { label: "Evening", icon: "🌙" },
-  Flexible: { label: "Flexible", icon: "🕐" },
-};
 
 export function RouteOptimization() {
   const { activePlan } = usePlanContext();
@@ -93,216 +51,208 @@ export function RouteOptimization() {
     longitude: number;
   } | null>(null);
   const [startLocation, setStartLocation] = useState("");
+  const [dayStartLocations, setDayStartLocations] = useState<
+    Record<
+      string,
+      {
+        name: string;
+        latitude: number;
+        longitude: number;
+      }
+    >
+  >({});
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [showOptimizedRoute, setShowOptimizedRoute] = useState(false);
   const [transportMode, setTransportMode] = useState<"driving" | "walking" | "cycling">("driving");
   const [routeGeometry, setRouteGeometry] = useState<any[]>([]);
   const [routeLegs, setRouteLegs] = useState<any[]>([]);
   const [routeDistanceKm, setRouteDistanceKm] = useState(0);
-  const [optimizedStopsState, setOptimizedStopsState] = useState<any[]>([]);
   const [originalRouteKm, setOriginalRouteKm] = useState(0);
-  const allDays = routeData?.stops
-      ? [
-          ...new Set(
-            routeData.stops.map((s: any) =>
-              s.dayDate
-                ? new Date(s.dayDate).toLocaleDateString()
-                : "Date pending"
-            )
-          ),
-        ].sort((a: string, b: string) => {
-          const [dayA, monthA, yearA] = a.split("/");
-          const [dayB, monthB, yearB] = b.split("/");
+  const [showOptimizedRoute, setShowOptimizedRoute] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
+  const [locationsLoaded, setLocationsLoaded] = useState(false);
+  const allDays = routeData?.originalStops
+    ? [
+        ...new Set(
+          routeData.originalStops.map(
+            (s: any) => s.dayDate || "Date pending"
+          )
+        ),
+      ].sort(
+        (a: string, b: string) =>
+          new Date(a).getTime() -
+          new Date(b).getTime()
+      )
+    : []; 
 
-          return (
-            new Date(
-              Number(yearA),
-              Number(monthA) - 1,
-              Number(dayA)
-            ).getTime() -
-            new Date(
-              Number(yearB),
-              Number(monthB) - 1,
-              Number(dayB)
-            ).getTime()
-          );
-        })
-      : [];
-
-    const stopsForSelectedDay = routeData?.stops?.filter((s: any) => {
-      const day = s.dayDate
-        ? new Date(s.dayDate).toLocaleDateString()
-        : "Date pending";
-      return day === selectedDay;
-    }) ?? [];
-  useEffect(() => {
-    const optimizeRoute = async () => {
-      if (
-        !currentLocation ||
-        stopsForSelectedDay.length === 0
-      ) {
-        setOptimizedStopsState([]);
+    const stopsForSelectedDay =
+      routeData?.originalStops?.filter(
+        (s: any) =>
+          (s.dayDate || "Date pending") === selectedDay
+      ) ?? [];
+    const optimizedStopsForSelectedDay =
+      routeData?.optimizedStops?.filter(
+        (s: any) =>
+          (s.dayDate || "Date pending") === selectedDay
+      ) ?? [];
+    const loadRouteData = async () => {
+      if (!activePlan) {
+        setRouteData(null);
+        setSelectedDay(null);
         return;
       }
-
+      setCurrentLocation(null);
+      setStartLocation("");
+      setShowOptimizedRoute(false);
+      setRouteGeometry([]);
+      setRouteDistanceKm(0);
+      setOriginalRouteKm(0);
+      setRouteLegs([]);
       try {
-        let remaining = [...stopsForSelectedDay];
-        let optimized = [];
+        setLoading(true);
+        setError("");
 
-        let current = currentLocation;
+      const nextRoute = await getRouteOptimization(activePlan.id, null, null);
+      setRouteData(nextRoute);
+      setCurrentLocation(null);
+      setStartLocation("");
+        if (nextRoute?.originalStops?.length) {
+          const sortedDates = [
+            ...new Set(
+              nextRoute.originalStops
+                .map((s: any) => s.dayDate)
+                .filter(Boolean)
+            ),
+          ].sort(
+            (a: any, b: any) =>
+              new Date(a).getTime() -
+              new Date(b).getTime()
+          );
 
-        while (remaining.length > 0) {
+          const savedDay = localStorage.getItem(
+            `selected-day-${activePlan.id}`
+          );
 
-          let nearestIndex = 0;
-          let nearestDistance = Number.MAX_VALUE;
+          const firstDay = String(sortedDates[0]);
 
-          remaining.forEach((stop, index) => {
+          const validDay =
+            savedDay &&
+            sortedDates.includes(savedDay)
+              ? savedDay
+              : firstDay;
 
-            const dist = Math.sqrt(
-              Math.pow(stop.latitude - current.latitude, 2) +
-              Math.pow(stop.longitude - current.longitude, 2)
-            );
+          setSelectedDay(validDay);
+        }
 
-            if (dist < nearestDistance) {
-              nearestDistance = dist;
-              nearestIndex = index;
-            }
-          });
+      } catch (fetchError) {
 
-  const nextStop = remaining.splice(
-    nearestIndex,
-    1
-  )[0];
-
-  optimized.push(nextStop);
-
-  current = {
-    latitude: nextStop.latitude,
-    longitude: nextStop.longitude,
-  };
-}
-
-setOptimizedStopsState(optimized);
-
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    optimizeRoute();
-  }, [
-    currentLocation,
-    selectedDay,
-    transportMode,
-    routeData,
-  ]);
-
-  const loadRouteData = async () => {
-    if (!activePlan) {
-      setRouteData(null);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError("");
-
-     const nextRoute = await getRouteOptimization(activePlan.id);
-     setRouteData(nextRoute);
-
-      if (nextRoute?.stops?.length) {
-        const sortedDates = [
-          ...new Set(
-            nextRoute.stops
-              .map((s: any) => s.dayDate)
-              .filter(Boolean)
-          ),
-        ].sort(
-          (a: any, b: any) =>
-            new Date(a).getTime() -
-            new Date(b).getTime()
+        setError(
+          getApiErrorMessage(
+            fetchError,
+            "Unable to calculate route optimization."
+          )
         );
 
-        setSelectedDay(
-          new Date(sortedDates[0] as string).toLocaleDateString()
-        );
+      } finally {
+        setLoading(false);
       }
+      };
+      
+      useEffect(() => {
+        loadRouteData();
+      }, [activePlan?.id]);
 
-    } catch (fetchError) {
+      useEffect(() => {
+        if (!activePlan || !selectedDay) return;
 
-      setError(
-        getApiErrorMessage(
-          fetchError,
-          "Unable to calculate route optimization."
-        )
+        localStorage.setItem(
+          `selected-day-${activePlan.id}`,
+          selectedDay
+        );
+      }, [selectedDay, activePlan?.id]);
+
+    useEffect(() => {
+      if (!activePlan) return;
+
+      const saved = localStorage.getItem(
+        `route-starts-${activePlan.id}`
       );
 
-    } finally {
-      setLoading(false);
-    }
-    };
-    
-    
-  useEffect(() => {
-  loadRouteData();
-  }, [activePlan?.id]);
+      if (saved) {
+        setDayStartLocations(JSON.parse(saved));
+      } else {
+        setDayStartLocations({});
+      }
 
-  
-  useEffect(() => {
-    setCurrentLocation(null);
-    setStartLocation("");
-    setShowOptimizedRoute(false);
-  }, [selectedDay]);
+      setLocationsLoaded(true);
+    }, [activePlan?.id]);
+    
+    useEffect(() => {
+      if (!activePlan || !locationsLoaded) return;
+
+      localStorage.setItem(
+        `route-starts-${activePlan.id}`,
+        JSON.stringify(dayStartLocations)
+      );
+    }, [dayStartLocations, activePlan?.id, locationsLoaded]);
+
+    useEffect(() => {
+      if (!selectedDay) return;
+
+      setShowOptimizedRoute(false);
+
+      const savedLocation =
+        dayStartLocations[selectedDay];
+
+      if (savedLocation) {
+        setStartLocation(savedLocation.name);
+
+        setCurrentLocation({
+          latitude: savedLocation.latitude,
+          longitude: savedLocation.longitude,
+        });
+      } else {
+        setStartLocation("");
+        setCurrentLocation(null);
+        setRouteGeometry([]);
+        setRouteLegs([]);
+        setRouteDistanceKm(0);
+      }
+    }, [selectedDay, dayStartLocations]);
 
   useEffect(() => {
     const fetchRoute = async () => {
-      const points = (
-        showOptimizedRoute
-          ? optimizedRoutePoints
-          : originalRoutePoints
-      ) as number[][];
 
-      if (points.length < 2) {
+      if (!currentLocation) {
         setRouteGeometry([]);
+        setRouteDistanceKm(0);
+        setRouteLegs([]);
         return;
       }
 
+      const routeStops = showOptimizedRoute
+        ? optimizedStopsForSelectedDay
+        : stopsForSelectedDay;
+
+      const points = [
+        [currentLocation.longitude, currentLocation.latitude],
+        ...routeStops.map((stop: any) => [
+          stop.longitude,
+          stop.latitude,
+        ]),
+      ];
+
+      if (points.length < 2) return;
+
       try {
-        const coordinates = points
-          .map((p) => `${p[1]},${p[0]}`)
-          .join(";");
 
-        const orsProfile =
-          transportMode === "driving"
-            ? "driving-car"
-            : transportMode === "walking"
-            ? "foot-walking"
-            : "cycling-regular";
-console.log("KEY", ORS_API_KEY);
-console.log("POINTS", points);
-
-const response = await fetch(
-  `https://api.openrouteservice.org/v2/directions/${orsProfile}/geojson`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: ORS_API_KEY,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              coordinates: points.map((p) => [
-                p[1],
-                p[0],
-              ]),
-            }),
-          }
+        const data = await getRouteGeometry(
+          points,
+          transportMode
         );
 
-        const data = await response.json();
-        console.log("ORS RESPONSE", data);
         const geometry =
           data.features?.[0]?.geometry?.coordinates?.map(
             (coord: number[]) => [
@@ -313,15 +263,14 @@ const response = await fetch(
 
         setRouteGeometry(geometry);
 
-        const summary = data.features?.[0]?.properties?.summary;
-        const segments = data.features?.[0]?.properties?.segments || [];
-        console.log("SEGMENTS", segments);
+        const summary =
+          data.features?.[0]?.properties?.summary;
+
+        const segments =
+          data.features?.[0]?.properties?.segments || [];
+
         setRouteLegs(segments);
-          console.log("SUMMARY", summary);
-          console.log(
-            "FIRST COORD",
-            data.features?.[0]?.geometry?.coordinates?.[0]
-          );
+
         setRouteDistanceKm(
           (summary?.distance || 0) / 1000
         );
@@ -331,17 +280,20 @@ const response = await fetch(
             (summary?.distance || 0) / 1000
           );
         }
+
       } catch (err) {
         console.error(err);
       }
     };
 
     fetchRoute();
+
   }, [
-    showOptimizedRoute,
     currentLocation,
     selectedDay,
     transportMode,
+    showOptimizedRoute,
+    routeData,
   ]);
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -392,28 +344,7 @@ const response = await fetch(
   }
   const routeCalculated = !!currentLocation && routeDistanceKm > 0;
   const routeWarning = routeCalculated && routeDistanceKm > 25 && stopsForSelectedDay.length >= 4;
-
-  const originalRoutePoints = [
-    ...(currentLocation
-      ? [[currentLocation.latitude, currentLocation.longitude]]
-      : []),
-
-    ...stopsForSelectedDay.map((stop: any) => [
-      stop.latitude,
-      stop.longitude,
-    ]),
-  ];
-  const optimizedRoutePoints  = [
-    ...(currentLocation
-      ? [[currentLocation.latitude, currentLocation.longitude]]
-      : []),
-
-    ...optimizedStopsState.map((stop: any) => [
-      stop.latitude,
-      stop.longitude,
-    ]),
-  ];
-
+  const routeStatusVisible = currentLocation && routeDistanceKm > 0;
   return (
     <div className="max-w-6xl mx-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -440,7 +371,9 @@ const response = await fetch(
                         : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
                     }`}
                   >
-                    {day}
+                    {day !== "Date pending"
+                      ? new Date(day).toLocaleDateString()
+                      : day}
                   </button>
                 ))}
               </div>
@@ -465,22 +398,78 @@ const response = await fetch(
                   type="text"
                   placeholder="e.g. Hotel Roma, Via Veneto..."
                   value={startLocation}
-                  onChange={(e) => setStartLocation(e.target.value)}
+                  onChange={(e) => {setStartLocation(e.target.value); setShowSuggestions(true);}}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
                 />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedDay) {
+                      setDayStartLocations((prev) => {
+                        const updated = { ...prev };
+                        delete updated[selectedDay];
+                        return updated;
+                      });
+                    }
+
+                    setStartLocation("");
+                    setCurrentLocation(null);
+                    setShowOptimizedRoute(false);
+                    setRouteGeometry([]);
+                    setRouteLegs([]);
+                    setRouteDistanceKm(0);
+                    setSuggestions([]);
+                  }}
+                  className="px-3 py-2 border border-blue-500 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                >
+                  Clear
+                </button>
               </div>
 
-              {suggestions.length > 0 && (
+              {showSuggestions && suggestions.length > 0 && (
                 <div className="absolute z-50 w-full bg-white border border-gray-300 rounded mt-1 shadow-lg max-h-60 overflow-auto">
                   {suggestions.map((suggestion, index) => (
                     <button
                       key={index}
-                      onClick={() => {
-                        setStartLocation(suggestion.display_name);
-                        setCurrentLocation({
+                      onClick={async () => {
+                        const location = {
+                          name: suggestion.display_name,
                           latitude: parseFloat(suggestion.lat),
                           longitude: parseFloat(suggestion.lon),
+                        };
+
+                        if (selectedDay) {
+                          setDayStartLocations((prev) => ({
+                            ...prev,
+                            [selectedDay]: location,
+                          }));
+                        }
+
+                        setStartLocation(location.name);
+
+                        setCurrentLocation({
+                          latitude: location.latitude,
+                          longitude: location.longitude,
                         });
+                        if (activePlan) {
+                          const optimizedRoute =
+                            await getRouteOptimization(
+                              activePlan.id,
+                              location.latitude,
+                              location.longitude
+                            );
+
+                          
+                            setShowOptimizedRoute(false);
+
+                            setRouteData(optimizedRoute);
+
+                            setRouteGeometry([]);
+                            setRouteLegs([]);
+                            setRouteDistanceKm(0);
+                        }
+                        setShowSuggestions(false);
                         setSuggestions([]);
                       }}
                       className="w-full text-left px-3 py-2 hover:bg-gray-100 border-b border-gray-100 text-sm"
@@ -533,7 +522,7 @@ const response = await fetch(
                   <h3 className="font-medium text-sm">
                     Daily Route
                   </h3>
-                    {currentLocation && (
+                    {routeStatusVisible && (
                       <span
                         className={`text-xs font-medium px-2 py-1 rounded-full ${
                           routeWarning
@@ -566,13 +555,13 @@ const response = await fetch(
                     </div>
                   )}
 
-                  {(showOptimizedRoute ? optimizedStopsState : stopsForSelectedDay).map((stop: any, idx: number) => (
+                  {(showOptimizedRoute ? optimizedStopsForSelectedDay : stopsForSelectedDay).map((stop: any, idx: number) => (
                     <div
                       key={`${stop.activityId}-${idx}`}
                       className="flex items-start gap-3 bg-white border border-gray-200 rounded p-3"
                     >
                       <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-medium">
-                        {idx + 2}
+                        {currentLocation ? idx + 2 : idx + 1}
                       </div>
 
                       <div className="flex-1">
@@ -667,6 +656,7 @@ const response = await fetch(
             </h2>
             <div className="border-2 border-gray-300 rounded overflow-hidden">
               <MapContainer
+                key={`${activePlan?.id}-${selectedDay}`}
                 center={
                   currentLocation
                     ? [currentLocation.latitude, currentLocation.longitude]
@@ -690,10 +680,7 @@ const response = await fetch(
                   </Marker>
                 )}
 
-                {(showOptimizedRoute
-                    ? optimizedStopsState
-                    : stopsForSelectedDay
-                  ).map((stop: any, index: number) => (
+                {(showOptimizedRoute ? optimizedStopsForSelectedDay : stopsForSelectedDay).map((stop: any, index: number) => (
                   <Marker
                     key={`${stop.activityId}-${index}`}
                     position={
@@ -701,9 +688,7 @@ const response = await fetch(
                         stop.latitude,
                         stop.longitude,
                         index,
-                        showOptimizedRoute
-                          ? optimizedStopsState
-                          : stopsForSelectedDay
+                        showOptimizedRoute ? optimizedStopsForSelectedDay : stopsForSelectedDay
                       ) as any
                     }
                   icon={createNumberedIcon(

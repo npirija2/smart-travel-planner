@@ -1,11 +1,17 @@
 package com.travelplanner.planning_service.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import com.travelplanner.planning_service.dto.RouteOptimizationResponseDTO;
 import com.travelplanner.planning_service.dto.RouteStopDTO;
@@ -16,6 +22,7 @@ import com.travelplanner.planning_service.model.TravelPlan;
 import com.travelplanner.planning_service.repository.ActivityRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -24,8 +31,21 @@ public class RouteOptimizationService {
 
     private final ActivityRepository activityRepository;
     private final TravelPlanRepository travelPlanRepository;
-
+    @Value("${ors.api.key}")
+    private String orsApiKey;
+    @PostConstruct
+        public void testKey() {
+        System.out.println("ORS KEY = " + orsApiKey);
+        }
+    private final RestTemplate restTemplate = new RestTemplate();
     public RouteOptimizationResponseDTO optimizeRoute(Long travelPlanId) {
+        return optimizeRoute(
+                travelPlanId,
+                null,
+                null
+        );
+        }
+    public RouteOptimizationResponseDTO optimizeRoute(Long travelPlanId, Double startLatitude, Double startLongitude) {
 
         TravelPlan plan = travelPlanRepository.findById(travelPlanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Travel plan not found"));
@@ -46,53 +66,56 @@ public class RouteOptimizationService {
                     .destinationName(plan.getDestination().getName())
                     .strategy("No activities available")
                     .totalDistanceScore(0.0)
-                    .stops(List.of())
+                    .originalStops(List.of())
+                    .optimizedStops(List.of())
                     .build();
         }
 
-        Map<String, List<Activity>> grouped =
-                activities.stream()
-                        .collect(Collectors.groupingBy(a ->
-                                a.getDay().getDate() + "_" + a.getTimeslot()));
-
+        List<RouteStopDTO> originalStops = activities.stream().map(activity -> mapToStop(activity, 0)).toList();
+        Map<String, List<Activity>> grouped = activities.stream().collect(Collectors.groupingBy(a ->a.getDay().getDate() + "_" + a.getTimeslot()));
         List<RouteStopDTO> optimizedStops = new ArrayList<>();
 
         int order = 1;
         double totalDistance = 0.0;
 
         for (List<Activity> group : grouped.values()) {
+        List<Activity> remaining = new ArrayList<>(group);
 
-            List<Activity> remaining = new ArrayList<>(group);
+        double currentLat;
+        double currentLng;
 
-            Activity current = remaining.remove(0);
+        if (startLatitude != null && startLongitude != null) {
+                currentLat = startLatitude;
+                currentLng = startLongitude;
 
-            optimizedStops.add(mapToStop(current, order++));
+        } else {
+                Activity first = remaining.remove(0);
 
-            while (!remaining.isEmpty()) {
+                currentLat = first.getLocation().getLatitude();
+                currentLng = first.getLocation().getLongitude();
 
+                optimizedStops.add(mapToStop(first, order++));
+        }
+
+        while (!remaining.isEmpty()) {
                 Activity nearest = null;
                 double nearestDistance = Double.MAX_VALUE;
 
                 for (Activity candidate : remaining) {
-
-                    double distance = calculateDistance(
-                            current.getLocation(),
-                            candidate.getLocation()
-                    );
-
+                    double distance = calculateDistance(currentLat, currentLng, candidate.getLocation().getLatitude(), candidate.getLocation().getLongitude());
                     if (distance < nearestDistance) {
                         nearestDistance = distance;
                         nearest = candidate;
                     }
                 }
-
                 totalDistance += nearestDistance;
 
-                current = nearest;
+                currentLat = nearest.getLocation().getLatitude();
+                currentLng = nearest.getLocation().getLongitude();
 
-                optimizedStops.add(mapToStop(current, order++));
+                optimizedStops.add(mapToStop(nearest, order++));
 
-                remaining.remove(current);
+                remaining.remove(nearest);
             }
         }
 
@@ -101,7 +124,8 @@ public class RouteOptimizationService {
                 .destinationName(plan.getDestination().getName())
                 .strategy("Sort by day, timeslot, and closest available coordinates")
                 .totalDistanceScore(totalDistance)
-                .stops(optimizedStops)
+                .originalStops(originalStops)
+                .optimizedStops(optimizedStops)
                 .build();
     }
 
@@ -123,15 +147,7 @@ public class RouteOptimizationService {
                 .address(location.getAddress())
                 .build();
     }
-
-    private double calculateDistance(Location a, Location b) {
-
-        double lat1 = a.getLatitude();
-        double lon1 = a.getLongitude();
-
-        double lat2 = b.getLatitude();
-        double lon2 = b.getLongitude();
-
+        private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         double earthRadius = 6371;
 
         double dLat = Math.toRadians(lat2 - lat1);
@@ -144,8 +160,45 @@ public class RouteOptimizationService {
                         * Math.sin(dLon / 2)
                         * Math.sin(dLon / 2);
 
-        double c = 2 * Math.atan2(Math.sqrt(calc), Math.sqrt(1 - calc));
+        double c = 2 * Math.atan2(
+                Math.sqrt(calc),
+                Math.sqrt(1 - calc)
+        );
 
         return earthRadius * c;
-    }
+        }
+        public String getRouteGeometry(List<List<Double>> coordinates, String transportMode) {
+                System.out.println("ORS KEY = [" + orsApiKey + "]");
+                String profile;
+                switch (transportMode) {
+                        case "walking":
+                        profile = "foot-walking";
+                        break;
+                        case "cycling":
+                        profile = "cycling-regular";
+                        break;
+                        default:
+                        profile = "driving-car";
+                }
+                String url =
+                        "https://api.openrouteservice.org/v2/directions/"
+                                + profile
+                                + "/geojson";
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("Authorization", orsApiKey);
+
+                Map<String, Object> body = new HashMap<>();
+                body.put("coordinates", coordinates);
+
+                HttpEntity<Map<String, Object>> request =
+                        new HttpEntity<>(body, headers);
+
+                return restTemplate.postForObject(
+                        url,
+                        request,
+                        String.class
+                );
+                }
 }

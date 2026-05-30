@@ -12,6 +12,16 @@ function clearStoredAuth() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
   localStorage.removeItem(ACTIVE_PLAN_STORAGE_KEY);
+
+  Object.keys(localStorage).forEach((key) => {
+    if (
+      key.startsWith("selected-day-") ||
+      key.startsWith("route-starts-")
+    ) {
+      localStorage.removeItem(key);
+    }
+  });
+
   sessionStorage.clear();
 }
 
