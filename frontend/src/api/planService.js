@@ -48,6 +48,37 @@ export const getAttractions = async (planId, interest = '') => {
     return response.data;
 };
 
+export const getSavedAttractions = async (planId) => {
+  const response = await api.get(`/travel-plans/${planId}/attractions/saved`);
+  return response.data;
+};
+
+export const saveAttraction = async (planId, locationId) => {
+  await api.post(`/travel-plans/${planId}/attractions/save`, {
+    locationId,
+  });
+};
+
+export const unsaveAttraction = async (planId, locationId) => {
+  await api.delete(`/travel-plans/${planId}/attractions/save`, {
+    params: { locationId },
+  });
+};
+
+export const addAttractionToItinerary = async (planId, locationId, dayId) => {
+  const response = await api.post(`/travel-plans/${planId}/attractions/itinerary`, {
+    locationId,
+    dayId,
+  });
+
+  return response.data;
+};
+
+export const getPlanDays = async (planId) => {
+  const response = await api.get(`/travel-plans/${planId}/days`);
+  return response.data;
+};
+
 export const getWeatherForecast = async (planId) => {
     const response = await api.get(`/travel-plans/${planId}/weather`);
     return response.data;
