@@ -44,6 +44,12 @@ function App() {
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
+        Object.keys(localStorage).forEach((key) => {
+            if (key.startsWith('selected-day-') || key.startsWith('route-starts-')) {
+                localStorage.removeItem(key);
+            }
+        });
+
         window.dispatchEvent(new Event('auth-change'));
     };
 

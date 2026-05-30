@@ -35,3 +35,5 @@ replay_pid*
 
 # Local backend runtime artifacts
 backend/.run/
+
+frontend/.env

@@ -78,7 +78,8 @@ public class PlanExperienceService {
                 .destinationName(plan.getDestination().getName())
                 .strategy("Sort by day, timeslot, and closest available coordinates")
                 .totalDistanceScore(calculateDistanceScore(stops))
-                .stops(stops)
+                .originalStops(stops)
+                .optimizedStops(stops)
                 .build();
     }
 

@@ -29,8 +29,10 @@ export const getTravelPlanDays = async (planId) => {
     return response.data;
 };
 
-export const getRouteOptimization = async (travelPlanId) => {
-  const response = await api.get(`/routes/optimize/${travelPlanId}`);
+export const getRouteOptimization = async (travelPlanId, startLatitude, startLongitude) => {
+  const response = await api.post(
+    "/routes/optimize",
+    {travelPlanId, startLatitude, startLongitude,});
   return response.data;
 };
 
@@ -90,4 +92,9 @@ export const getLocalRecommendations = async (planId) => {
 export const getWaitingTimeInsights = async (planId) => {
     const response = await api.get(`/travel-plans/${planId}/waiting-times`);
     return response.data;
+};
+
+export const getRouteGeometry = async (coordinates, transportMode) => {
+  const response = await api.post("/routes/geometry", {coordinates, transportMode,});
+  return typeof response.data === "string"  ? JSON.parse(response.data) : response.data;
 };

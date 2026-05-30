@@ -87,6 +87,12 @@ spring:
             - Path=/api/locations/**
           filters:
             - AuthenticationFilter
+        - id: planning-service-routes
+          uri: lb://planning-service
+          predicates:
+            - Path=/api/routes/**
+          filters:
+            - AuthenticationFilter
         - id: communication-service-notifications
           uri: lb://communication-service
           predicates:

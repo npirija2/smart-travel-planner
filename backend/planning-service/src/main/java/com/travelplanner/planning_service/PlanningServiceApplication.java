@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -22,7 +23,6 @@ import com.travelplanner.planning_service.repository.DayRepository;
 import com.travelplanner.planning_service.repository.DestinationRepository;
 import com.travelplanner.planning_service.repository.LocationRepository;
 import com.travelplanner.planning_service.repository.TravelPlanRepository;
-
 @SpringBootApplication(scanBasePackages = "com.travelplanner")
 public class PlanningServiceApplication {
 
